@@ -6,12 +6,30 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), object(), camera() {
-	camera.setPosition(glm::vec3(0, 0, -3));
+glm::vec3 cubePositions[] = {
+	glm::vec3(0.0f, 0.0f, 0.0f),
+	glm::vec3(2.0f, 5.0f, -15.0f),
+	glm::vec3(-1.5f, -2.2f, -2.5f),
+	glm::vec3(-3.8f, -2.0f, -12.3f),
+	glm::vec3(2.4f, -0.4f, -3.5f),
+	glm::vec3(-1.7f, 3.0f, -7.5f),
+	glm::vec3(1.3f, -2.0f, -2.5f),
+	glm::vec3(1.5f, 2.0f, -2.5f),
+	glm::vec3(1.5f, 0.2f, -1.5f),
+	glm::vec3(-1.3f, 1.0f, -1.5f)
+};
+
+Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), camera(), object() {
+	camera.setPosition(glm::vec3(0, 0, 3));
+	glEnable(GL_DEPTH_TEST);
 }
 
 void Viewport::setShader(const Shader& sh) {
 	shader = sh;
+}
+
+void Viewport::updateCameraProjection() {
+	camera.setPerspective(fov, size.x / size.y, 0.1f, 100.0f);
 }
 
 void Viewport::updateFramebuffer() {
@@ -21,7 +39,7 @@ void Viewport::updateFramebuffer() {
 	if (size.x == newViewportSize.x && size.y == newViewportSize.y)
 		return;
 	size = newViewportSize;
-	camera.updateProjection(45.0f, size.x / size.y, 0.1f, 100.0f);
+	updateCameraProjection();
 
 	glDeleteFramebuffers(1, &framebuffer);
 	glDeleteTextures(1, &textureColorbuffer);
@@ -52,17 +70,63 @@ void Viewport::updateFramebuffer() {
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-int a = 1;
 
 void Viewport::render() {
 	ImGui::Begin("Viewport");
 	updateFramebuffer();
 
+	//update camera
+	if (ImGui::IsWindowFocused()) {
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			ImVec2 mousePos = ImGui::GetMousePos();
+			if (firstMouse) {
+				firstMouse = false;
+				lastMousePos = mousePos;
+			}
+			else {
+				float sensitivity = 0.1f;
+				ImVec2 offset = { sensitivity * (mousePos.x - lastMousePos.x), sensitivity * (lastMousePos.y - mousePos.y) };
+				lastMousePos = mousePos;
+
+				camera.yaw += offset.x;
+				camera.pitch += offset.y;
+
+				if (camera.pitch > 89.0f)
+					camera.pitch = 89.0f;
+				if (camera.pitch < -89.0f)
+					camera.pitch = -89.0f;
+
+				camera.updateView();
+			}
+		}
+		else
+			firstMouse = true;
+
+		float cameraSpeed = 0.1f;
+		glm::vec3 moveDir = glm::vec3(0);
+		if (ImGui::IsKeyDown(ImGuiKey_W))
+			moveDir += camera.direction;
+		if (ImGui::IsKeyDown(ImGuiKey_A))
+			moveDir += camera.right;
+		if (ImGui::IsKeyDown(ImGuiKey_S))
+			moveDir -= camera.direction;
+		if (ImGui::IsKeyDown(ImGuiKey_D))
+			moveDir -= camera.right;
+
+		if (moveDir != glm::vec3(0)) {
+			moveDir = glm::normalize(moveDir) * cameraSpeed;
+			camera.position += moveDir;
+			camera.updateView();
+		}
+	}
+	else
+		firstMouse = true;
+
 	//Setup Framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glViewport(0, 0, size.x, size.y);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//Draw 
 	if (settings.wireframe)
@@ -70,22 +134,28 @@ void Viewport::render() {
 	else
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	
+
+
 	shader.use();
-	object.setRotationAxis(glm::vec3(0, 1, 0));
-	object.setRotationAngle(ImGui::GetTime());
 	camera.useInShader(shader);
-	if (a) {
-		a = 0;
-		glm::mat4 m = camera.projection;
-		std::cout << m[0][0] << " " << m[0][1] << " " << m[0][2] << " " << m[0][3] << std::endl;
-		std::cout << m[1][0] << " " << m[1][1] << " " << m[1][2] << " " << m[1][3] << std::endl;
-		std::cout << m[2][0] << " " << m[2][1] << " " << m[2][2] << " " << m[2][3] << std::endl;
-		std::cout << m[3][0] << " " << m[3][1] << " " << m[3][2] << " " << m[3][3] << std::endl;
-		std::cout << std::endl;
-	}
+	shader.setVec3("lightPos", glm::vec3(0));
+	shader.setVec3("lightColor", glm::vec3(1));
+	shader.setVec3("objectColor", glm::vec3(1,0.5f,0.1f));
 	
 
+	for (unsigned int i = 0; i < 10; i++) {
+		float angle = 20.0f * i;
+		object.setRotationAngle(glm::radians(angle));
+		object.setRotationAxis(glm::vec3(1.0f, 0.3f, 0.5f));
+		object.setPosition(cubePositions[i]);
+		//object.setScale(glm::vec3(1, 1, 5));
+		object.render(shader);
+	}
+
+	object.setRotationAngle(0);
+	object.setPosition(glm::vec3(0, 0, -20));
 	object.render(shader);
+
 
 	//unbind Framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

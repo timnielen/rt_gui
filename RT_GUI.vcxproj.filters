@@ -60,6 +60,8 @@
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
     <None Include="shader\vertex.glsl" />
     <None Include="shader\fragment.glsl" />
+    <None Include="vertex_textured.glsl" />
+    <None Include="fragment_textured.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="extern\imgui\imconfig.h">

@@ -24,6 +24,12 @@ void App::renderUI(ImGuiIO& io) {
 		shader = Shader("shader/vertex.glsl", "shader/fragment.glsl");
 		viewport->setShader(shader);
 	}
+	if (ImGui::SliderFloat("FOV", &(viewport->fov), 1, 180, "%.0f")) {
+		viewport->updateCameraProjection();
+	}
+	if (ImGui::InputFloat3("Camera position", glm::value_ptr(viewport->camera.position))) {
+		viewport->camera.updateView();
+	}
 	ImGui::End();
 
 	viewport->render();

@@ -13,13 +13,18 @@ class Viewport
 private:
 	ImVec2 size;
 	Object3D object;
-	Camera camera;
 	unsigned int framebuffer = 0;
 	unsigned int textureColorbuffer = 0;
 	unsigned int rbo = 0;
 	void updateFramebuffer();
+
 public:
+	void updateCameraProjection();
+	bool firstMouse = true;
+	ImVec2 lastMousePos = { 0,0 };
+	Camera camera;
 	Shader shader;
+	float fov = 45.0f;
 	ViewportSettings settings;
 	Viewport(const Shader&);
 	void setShader(const Shader&);
