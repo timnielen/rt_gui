@@ -49,6 +49,12 @@
     <ClCompile Include="Shader.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="Object3D.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
@@ -86,5 +92,7 @@
     <ClInclude Include="Viewport.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="extern\stb\stb_image.h" />
+    <ClInclude Include="Object3D.h" />
+    <ClInclude Include="Camera.h" />
   </ItemGroup>
 </Project>

@@ -47,7 +47,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_MBCS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>extern\stb;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>extern;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -69,7 +69,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;_MBCS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>extern\stb;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>extern;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -87,6 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="extern\gl3w\src\gl3w.c" />
     <ClCompile Include="extern\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="extern\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -96,6 +97,7 @@
     <ClCompile Include="extern\imgui\imgui_tables.cpp" />
     <ClCompile Include="extern\imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Object3D.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
@@ -106,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="extern\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="extern\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="extern\imgui\imconfig.h" />
@@ -115,6 +118,7 @@
     <ClInclude Include="extern\imgui\imstb_textedit.h" />
     <ClInclude Include="extern\imgui\imstb_truetype.h" />
     <ClInclude Include="extern\stb\stb_image.h" />
+    <ClInclude Include="Object3D.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewport.h" />
   </ItemGroup>
