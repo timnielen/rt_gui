@@ -7,7 +7,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 glm::vec3 cubePositions[] = {
-	glm::vec3(0.0f, 0.0f, 0.0f),
 	glm::vec3(2.0f, 5.0f, -15.0f),
 	glm::vec3(-1.5f, -2.2f, -2.5f),
 	glm::vec3(-3.8f, -2.0f, -12.3f),
@@ -143,8 +142,9 @@ void Viewport::render() {
 	shader.setVec3("objectColor", glm::vec3(1,0.5f,0.1f));
 	
 
-	for (unsigned int i = 0; i < 10; i++) {
+	for (unsigned int i = 0; i < 9; i++) {
 		float angle = 20.0f * i;
+		object.setScale(1);
 		object.setRotationAngle(glm::radians(angle));
 		object.setRotationAxis(glm::vec3(1.0f, 0.3f, 0.5f));
 		object.setPosition(cubePositions[i]);
@@ -152,8 +152,9 @@ void Viewport::render() {
 		object.render(shader);
 	}
 
-	object.setRotationAngle(0);
-	object.setPosition(glm::vec3(0, 0, -20));
+	object.setPosition(glm::vec3(0));
+	object.setScale(0.1f);
+	shader.setVec3("objectColor", glm::vec3(100));
 	object.render(shader);
 
 
