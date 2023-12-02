@@ -47,15 +47,15 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_MBCS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>extern;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>extern\assimp\include;extern;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);extern\imgui\examples\libs\glfw\lib-vc2010-64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>assimp-vc143-mt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>libs\assimp;$(CudaToolkitLibDir);extern\imgui\examples\libs\glfw\lib-vc2010-64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <CudaCompile>
@@ -69,7 +69,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;_MBCS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>extern;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>extern\assimp\include;extern;extern\gl3w\include;extern\imgui\examples\libs\glfw\include;extern\imgui;extern\imgui\backends;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);..\..;..\..\backends;..\libs\glfw\include</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -78,8 +78,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);extern\imgui\examples\libs\glfw\lib-vc2010-64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>assimp-vc143-mt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>libs\assimp;$(CudaToolkitLibDir);extern\imgui\examples\libs\glfw\lib-vc2010-64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -96,17 +96,24 @@
     <ClCompile Include="extern\imgui\imgui_draw.cpp" />
     <ClCompile Include="extern\imgui\imgui_tables.cpp" />
     <ClCompile Include="extern\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="File.cpp" />
+    <ClCompile Include="Grid.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="Model.cpp" />
     <ClCompile Include="Object3D.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
-    <None Include="fragment_textured.glsl" />
+    <None Include="shader\axis_geometry.glsl" />
+    <None Include="shader\color_fragment.glsl" />
+    <None Include="shader\forward_vertex.glsl" />
     <None Include="shader\fragment.glsl" />
+    <None Include="shader\grid_geometry.glsl" />
+    <None Include="shader\in_color_fragment.glsl" />
     <None Include="shader\vertex.glsl" />
-    <None Include="vertex_textured.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
@@ -119,7 +126,11 @@
     <ClInclude Include="extern\imgui\imstb_rectpack.h" />
     <ClInclude Include="extern\imgui\imstb_textedit.h" />
     <ClInclude Include="extern\imgui\imstb_truetype.h" />
-    <ClInclude Include="extern\stb\stb_image.h" />
+    <ClInclude Include="File.h" />
+    <ClInclude Include="Grid.h" />
+    <ClInclude Include="Helper.h" />
+    <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="Object3D.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewport.h" />

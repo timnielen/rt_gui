@@ -11,6 +11,12 @@
     <Filter Include="gl3w">
       <UniqueIdentifier>{7888b9f1-8d1c-426c-b987-af22449f0971}</UniqueIdentifier>
     </Filter>
+    <Filter Include="includes">
+      <UniqueIdentifier>{9ddd6eee-f72b-4a74-8877-7b105b02f3b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shader">
+      <UniqueIdentifier>{e2669ade-bda5-47eb-ad75-9961d68cdf56}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -55,13 +61,42 @@
     <ClCompile Include="Camera.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="File.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Grid.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
-    <None Include="shader\vertex.glsl" />
-    <None Include="shader\fragment.glsl" />
-    <None Include="vertex_textured.glsl" />
-    <None Include="fragment_textured.glsl" />
+    <None Include="shader\axis_geometry.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\color_fragment.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\forward_vertex.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\fragment.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\grid_geometry.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\in_color_fragment.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\vertex.glsl">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="extern\imgui\imconfig.h">
@@ -82,19 +117,39 @@
     <ClInclude Include="extern\imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="Application.h">
-      <Filter>sources</Filter>
-    </ClInclude>
     <ClInclude Include="extern\imgui\backends\imgui_impl_glfw.h">
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="extern\imgui\backends\imgui_impl_opengl3.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="Viewport.h" />
-    <ClInclude Include="Shader.h" />
-    <ClInclude Include="extern\stb\stb_image.h" />
-    <ClInclude Include="Object3D.h" />
-    <ClInclude Include="Camera.h" />
+    <ClInclude Include="Camera.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="File.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Grid.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Object3D.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Viewport.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Application.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Helper.h" />
   </ItemGroup>
 </Project>

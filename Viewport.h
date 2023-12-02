@@ -4,6 +4,9 @@
 #include <cstdbool>
 #include "Object3D.h"
 #include "Camera.h"
+#include "Grid.h"
+#include "Model.h"
+
 struct ViewportSettings {
 	bool wireframe = false;
 };
@@ -12,10 +15,15 @@ class Viewport
 {
 private:
 	ImVec2 size;
-	Object3D object;
+	Model *model;
+	Grid grid;
+	glm::vec4 clearColor = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
+	unsigned int intermediateFBO = 0;
 	unsigned int framebuffer = 0;
+	unsigned int screenTexture = 0;
 	unsigned int textureColorbuffer = 0;
 	unsigned int rbo = 0;
+	unsigned int axisVAO;
 	void updateFramebuffer();
 
 public:
@@ -24,11 +32,14 @@ public:
 	ImVec2 lastMousePos = { 0,0 };
 	Camera camera;
 	Shader shader;
+	Shader gridShader;
+	Shader axisShader;
+	glm::vec3 dirLight = glm::vec3(1, -1, -1);
 	float fov = 45.0f;
 	ViewportSettings settings;
 	Viewport(const Shader&);
 	void setShader(const Shader&);
-	void render();
+	void render(float deltaTime);
 	~Viewport();
 };
 

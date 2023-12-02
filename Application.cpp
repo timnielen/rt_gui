@@ -5,9 +5,11 @@
 #include <GL/gl3w.h>
 #include "Viewport.h"
 #include "imgui.h"
+#include <GLFW/glfw3.h>
 
 App::App() : shader("shader/vertex.glsl", "shader/fragment.glsl") {
 	viewport = new Viewport(shader);
+	glfwSwapInterval(0);
 }
 	
 
@@ -30,9 +32,9 @@ void App::renderUI(ImGuiIO& io) {
 	if (ImGui::InputFloat3("Camera position", glm::value_ptr(viewport->camera.position))) {
 		viewport->camera.updateView();
 	}
+	ImGui::InputFloat3("DirLight", glm::value_ptr(viewport->dirLight));
 	ImGui::End();
-
-	viewport->render();
+	viewport->render(io.DeltaTime);
 }
 
 App::~App()
