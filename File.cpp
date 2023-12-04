@@ -9,7 +9,6 @@
 
 
 unsigned int load_texture(const char* path, bool flipVertical) {
-	std::cout << "loading texture: " << path << std::endl;
 	unsigned int texture;
 	int width, height, nrChannels;
 	stbi_set_flip_vertically_on_load((int)flipVertical);

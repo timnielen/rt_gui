@@ -1,6 +1,7 @@
 #include "Model.h"
 #include <iostream>
 #include "File.h"
+#include <limits>
 
 void printMat4(glm::mat4 m) {
     for (int i = 0; i < 4; i++)
@@ -13,7 +14,7 @@ void printMat4(glm::mat4 m) {
 
 void Model::loadModel(std::string path) {
 	Assimp::Importer import;
-	const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+	const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -63,6 +64,14 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         vector.y = mesh->mNormals[i].y;
         vector.z = mesh->mNormals[i].z;
         vertex.Normal = vector;
+        vector.x = mesh->mTangents[i].x;
+        vector.y = mesh->mTangents[i].y;
+        vector.z = mesh->mTangents[i].z;
+        vertex.Tangent = vector;
+        vector.x = mesh->mBitangents[i].x;
+        vector.y = mesh->mBitangents[i].y;
+        vector.z = mesh->mBitangents[i].z;
+        vertex.Bitangent = vector;
         if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
         {
 
@@ -91,13 +100,13 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     if (mesh->mMaterialIndex >= 0)
     {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        //for(int i = 0; i<20; i++)
-            std::cout << material->GetTextureCount((aiTextureType)1) << std::endl;
 
         std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
         std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+        std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+        textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
     }
 
     return Mesh(vertices, indices, textures);
@@ -127,7 +136,8 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
             strcpy(path, directory.c_str());
             strcat(path, "/");
             strcat(path, str.C_Str());
-            texture.id = load_texture(path);
+            std::cout << "loading " << typeName << " texture: " << path << std::endl;
+            texture.id = load_texture(path, flipTextures);
             texture.type = typeName;
             texture.path = str.C_Str();
             textures.push_back(texture);
@@ -136,14 +146,49 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
     }
     return textures;
 }
-
-void Model::render(Shader& shader)
+void Model::render(Shader& shader, bool points)
 {
+    glm::mat4 transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, position);
+    transform = glm::rotate(transform, angle, rotationAxis);
+    transform = glm::scale(transform, scale);
     for (unsigned int i = 0; i < meshes.size(); i++)
     {
-        glm::mat4 t = glm::mat4(1);
-        t = glm::scale(t, glm::vec3(0.01));
-        shader.setMat4("transform", t*transformations[i]);
-        meshes[i].render(shader);
+        shader.setMat4("model", transform*transformations[i]);
+        meshes[i].render(shader, points);
     }
+}
+
+void Model::renderAABB(Shader& shader) {
+    glm::mat4 transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, position);
+    transform = glm::rotate(transform, angle, rotationAxis);
+    transform = glm::scale(transform, scale);
+    for (unsigned int i = 0; i < meshes.size(); i++)
+    {
+        shader.setMat4("model", transform * transformations[i]);
+        meshes[i].renderAABB(shader);
+    }
+}
+
+Hit Model::intersect(Ray& ray) {
+    Hit result;
+    glm::mat4 transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, position);
+    transform = glm::rotate(transform, angle, rotationAxis);
+    transform = glm::scale(transform, scale);
+
+    result.t = std::numeric_limits<float>::infinity();
+    int count = 0;
+    for (unsigned int i = 0; i < meshes.size(); i++) {
+        Hit h = meshes[i].intersect(ray, transform * transformations[i]);
+        if (h.hit)
+        {
+            result.hit = true;
+            count++;
+            if (h.t < result.t) result.t = h.t;
+        }
+    }
+    std::cout << count << std::endl;
+    return result;
 }

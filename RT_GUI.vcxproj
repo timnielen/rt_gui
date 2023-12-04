@@ -107,12 +107,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
+    <None Include="shader\pbr_fragment.glsl" />
     <None Include="shader\axis_geometry.glsl" />
     <None Include="shader\color_fragment.glsl" />
     <None Include="shader\forward_vertex.glsl" />
     <None Include="shader\fragment.glsl" />
     <None Include="shader\grid_geometry.glsl" />
     <None Include="shader\in_color_fragment.glsl" />
+    <None Include="shader\normals_geometry.glsl" />
     <None Include="shader\vertex.glsl" />
   </ItemGroup>
   <ItemGroup>
@@ -132,8 +134,12 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Object3D.h" />
+    <ClInclude Include="RT_Viewport.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewport.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="RT_Viewport.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

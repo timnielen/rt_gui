@@ -97,6 +97,12 @@
     <None Include="shader\vertex.glsl">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\pbr_fragment.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\normals_geometry.glsl">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="extern\imgui\imconfig.h">
@@ -151,5 +157,13 @@
       <Filter>includes</Filter>
     </ClInclude>
     <ClInclude Include="Helper.h" />
+    <ClInclude Include="RT_Viewport.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="RT_Viewport.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -7,11 +7,23 @@
 #include <glm/gtc/type_ptr.hpp>
 
 
-Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), camera(), grid(), gridShader(), axisShader() {
+Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), camera(), grid(), gridShader(), axisShader(), normalsShader(), aabbShader() {
 	//model = new Model("assets/Survival_BackPack_2/backpack.obj");
-	model = new Model("assets/pony-cartoon/source/Pony_cartoon.obj");
-	camera.setPosition(glm::vec3(0, 2, 6));
-	camera.pitch = -10.0f;
+	nearPlane = 0.1f;
+	farPlane = 1000.0f;
+	aabbShader.setVertex("shader/AABB/vertex.glsl");
+	aabbShader.setGeometry("shader/AABB/geometry.glsl");
+	aabbShader.setFragment("shader/AABB/fragment.glsl");
+	aabbShader.link();
+
+	normalsShader.setVertex("shader/vertex.glsl");
+	normalsShader.setGeometry("shader/normals_geometry.glsl");
+	normalsShader.setFragment("shader/in_color_fragment.glsl");
+	normalsShader.link();
+
+	model = new Model("assets/Survival_BackPack_2/backpack.obj");
+	camera.setPosition(glm::vec3(0));
+	camera.pitch = 0.0f;
 	camera.updateView();
 	glEnable(GL_DEPTH_TEST); 
 	glEnable(GL_MULTISAMPLE);
@@ -29,6 +41,19 @@ Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), camera(), gr
 	axisShader.link();
 	axisShader.use();
 	axisShader.setFloat("size", 0.2f);
+
+	glm::mat3 m = glm::mat3(1.0f);
+	std::cout << m[0][0] << " " << m[0][1] << " " << m[0][2] << std::endl;
+	std::cout << m[1][0] << " " << m[1][1] << " " << m[1][2] << std::endl;
+	std::cout << m[2][0] << " " << m[2][1] << " " << m[2][2] << std::endl;
+	float d = glm::determinant(m);
+	m = glm::inverse(m);
+	if (d == 0)
+		std::cout << "error" << std::endl;
+	else std::cout << "success" << std::endl;
+	std::cout << m[0][0] << " " << m[0][1] << " " << m[0][2] << std::endl;
+	std::cout << m[1][0] << " " << m[1][1] << " " << m[1][2] << std::endl;
+	std::cout << m[2][0] << " " << m[2][1] << " " << m[2][2] << std::endl;
 }
 
 void Viewport::setShader(const Shader& sh) {
@@ -36,7 +61,7 @@ void Viewport::setShader(const Shader& sh) {
 }
 
 void Viewport::updateCameraProjection() {
-	camera.setPerspective(fov, size.x / size.y, 0.1f, 1000.0f);
+	camera.setPerspective(fov, size.x / size.y, nearPlane, farPlane);
 }
 
 void Viewport::updateFramebuffer() {
@@ -46,6 +71,9 @@ void Viewport::updateFramebuffer() {
 	if (size.x == newViewportSize.x && size.y == newViewportSize.y)
 		return;
 	size = newViewportSize;
+	if (size.x == 0 || size.y == 0)
+		return;
+	//std::cout << "size " << size.x << " " << size.y << std::endl;
 	updateCameraProjection();
 
 	glDeleteFramebuffers(1, &framebuffer);
@@ -125,7 +153,7 @@ void Viewport::render(float deltaTime) {
 		else
 			firstMouse = true;
 
-		float cameraSpeed = 10.0f;
+		float cameraSpeed = 2.0f;
 		cameraSpeed *= deltaTime;
 		//std::cout << deltaTime << std::endl;
 		glm::vec3 moveDir = glm::vec3(0);
@@ -179,8 +207,42 @@ void Viewport::render(float deltaTime) {
 	shader.setVec3("viewPos", camera.position);	
 	
 	shader.setFloat("material.shininess", 32);
-	shader.setMat4("transform", glm::mat4(1));
-	model->render(shader);
+
+	//model->angle = ImGui::GetTime();
+	
+	model->render(shader, false);
+
+	if(settings.drawNormals) {
+
+		normalsShader.use();
+		normalsShader.setFloat("normalsLength", settings.viewNormalsLength);
+		camera.useInShader(normalsShader);
+		model->render(normalsShader, true);
+	}
+
+	if(settings.drawAABBs)
+	{
+		aabbShader.use();
+		camera.useInShader(aabbShader);
+		model->renderAABB(aabbShader);
+	}
+
+
+	ImVec2 mousePos = ImGui::GetMousePos();
+	ImVec2 windowPos = ImGui::GetWindowPos();
+	ImVec2 contentPos = ImGui::GetWindowContentRegionMin();
+	ImVec2 relativeMousePos = { 2*(mousePos.x - windowPos.x - contentPos.x) / size.x - 1, -2*(mousePos.y - windowPos.y - contentPos.y) / size.y + 1 };
+
+	if (ImGui::IsWindowFocused()) {
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+			float viewportHeight = nearPlane * glm::tan(glm::radians(fov/2));
+			float viewportWidth = viewportHeight * size.x / size.y;
+			glm::vec3 rayDir = (nearPlane * camera.direction) - (relativeMousePos.x * viewportWidth * camera.right) + (relativeMousePos.y * viewportHeight * camera.up);
+			std::cout << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
+			Ray r = Ray(camera.position, rayDir);
+			model->intersect(r);
+		}
+	}
 
 	//render grid and axies
 	gridShader.use();
@@ -192,8 +254,6 @@ void Viewport::render(float deltaTime) {
 	camera.useInShader(axisShader);
 	glDrawArrays(GL_POINTS, 0, 1);
 	glLineWidth(1.0f);
-
-
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);

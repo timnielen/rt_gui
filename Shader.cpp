@@ -56,6 +56,7 @@ void Shader::setGeometry(const char* path) {
 }
 
 unsigned int Shader::setShader(const char* path, int type) {
+	std::cout << "reading shader: " << path << std::endl;
 	// 1. retrieve the vertex/fragment source code from filePath
 	std::string fileContent = readTextFile(path);
 	const char* shaderCode = fileContent.c_str();
