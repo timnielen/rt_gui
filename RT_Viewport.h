@@ -3,7 +3,6 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <GL/gl3w.h>
-#include <cuda_fp16.h>
 #include <cuda_gl_interop.h>
 
 // Includes CUDA

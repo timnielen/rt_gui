@@ -171,6 +171,8 @@ Hit Mesh::intersect(Ray& r, glm::mat4 transform) {
     Hit h;
     if (!aabb.intersect(r, transform).hit)
         return h;
+    glm::vec3 origin = r.origin.toGLM();
+    glm::vec3 direction = r.direction.toGLM();
     for (unsigned int i = 0; i < indices.size(); i+=3) {
         glm::vec3 v1 = transformPoint(vertices[indices[i]].Position, transform);
         glm::vec3 v2 = transformPoint(vertices[indices[i+1]].Position, transform);
@@ -180,21 +182,21 @@ Hit Mesh::intersect(Ray& r, glm::mat4 transform) {
         glm::vec3 edge2 = v3 - v1;
         const float EPSILON = 0.00001f;
 
-        glm::vec3 rayVecXe2 = glm::cross(r.direction, edge2);
+        glm::vec3 rayVecXe2 = glm::cross(direction, edge2);
         float det = glm::dot(edge1, rayVecXe2);
 
         if (det > -EPSILON && det < EPSILON)
             continue;    // This ray is parallel to this triangle.
 
         float invDet = 1.0 / det;
-        glm::vec3 s = r.origin - v1;
+        glm::vec3 s = origin - v1;
         float u = invDet * glm::dot(s, rayVecXe2);
 
         if (u < 0.0 || u > 1.0)
             continue;
 
         glm::vec3 sXe1 = glm::cross(s, edge1);
-        float v = invDet * glm::dot(r.direction,sXe1);
+        float v = invDet * glm::dot(direction,sXe1);
 
         if (v < 0.0 || u + v > 1.0)
             continue;

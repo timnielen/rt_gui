@@ -160,6 +160,12 @@
     <ClInclude Include="RT_Viewport.h">
       <Filter>includes</Filter>
     </ClInclude>
+    <ClInclude Include="Vec3.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Ray.h">
+      <Filter>includes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="RT_Viewport.cu">

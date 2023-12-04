@@ -2,20 +2,9 @@
 #include <string>
 #include <vector>
 #include "Shader.h"
+#include "Ray.h"
 
-struct Hit {
-    bool hit = false;
-    float t = 0.0f;
-};
 
-struct Ray {
-    glm::vec3 origin;
-    glm::vec3 direction;
-    glm::vec3 invDir;
-    Ray(const glm::vec3& o, const glm::vec3& dir) : origin(o), direction(dir) {
-        invDir = 1.0f / direction;
-    }
-};
 
 struct AABB {
     glm::vec3 min;

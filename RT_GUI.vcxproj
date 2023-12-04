@@ -134,8 +134,10 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Object3D.h" />
+    <ClInclude Include="Ray.h" />
     <ClInclude Include="RT_Viewport.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="Vec3.h" />
     <ClInclude Include="Viewport.h" />
   </ItemGroup>
   <ItemGroup>
