@@ -38,7 +38,8 @@ void App::renderUI(ImGuiIO& io) {
 	ImGui::Checkbox("Draw Normals", &(viewport->settings.drawNormals));
 	ImGui::InputFloat("Normals Length", &(viewport->settings.viewNormalsLength));
 	ImGui::InputFloat3("DirLight", glm::value_ptr(viewport->dirLight));*/
-
+	ImGui::InputInt("Samples", &(rt_viewport->samples), 1);
+	ImGui::InputInt("Max Steps", &(rt_viewport->max_steps), 1);
 	ImGui::End();
 	//viewport->render(io.DeltaTime);
 	rt_viewport->render(io.DeltaTime);

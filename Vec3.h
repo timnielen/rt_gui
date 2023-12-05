@@ -9,8 +9,11 @@ class Vec3
 {
 public:
 	float x, y, z;
+    operator glm::vec3() {
+        return glm::vec3(x, y, z);
+    }
 	__host__ __device__ Vec3() : x(0), y(0), z(0) {};
-	__host__ __device__ Vec3(float x, float y, float z) : x(x), y(y), z(z) {};
+	__host__ __device__ Vec3(const float& x, const float& y, const float& z) : x(x), y(y), z(z) {};
     __host__ glm::vec3 toGLM() const {
         return glm::vec3(x, y, z);
     }
@@ -43,6 +46,7 @@ public:
         return *this;
     }
 
+
     __host__ __device__ Vec3& operator*=(float t) {
         x *= t;
         y *= t;
@@ -62,7 +66,7 @@ public:
         return x*x + y*y + z*z;
     }
 
-    __host__ __device__ float4 toColor() {
+    __host__ __device__ float4 toColor() const {
         return make_float4(x, y, z, 1.0f);
     }
 };
@@ -84,12 +88,30 @@ __host__ __device__ inline Vec3 operator-(const Vec3& u, const Vec3& v) {
     return Vec3(u.x - v.x, u.y - v.y, u.z - v.z);
 }
 
+
+
 __host__ __device__ inline Vec3 operator*(const Vec3& u, const Vec3& v) {
     return Vec3(u.x * v.x, u.y * v.y, u.z * v.z);
 }
 
 __host__ __device__ inline Vec3 operator*(float t, const Vec3& v) {
     return Vec3(t * v.x, t * v.y, t * v.z);
+}
+
+__host__ __device__ inline Vec3 operator+(float t, const Vec3& v) {
+    return Vec3(t + v.x, t + v.y, t + v.z);
+}
+
+__host__ __device__ inline Vec3 operator-(float t, const Vec3& v) {
+    return Vec3(t - v.x, t - v.y, t - v.z);
+}
+
+__host__ __device__ inline Vec3 operator+(const Vec3& v, float t) {
+    return Vec3(t + v.x, t + v.y, t + v.z);
+}
+
+__host__ __device__ inline Vec3 operator-(const Vec3& v, float t) {
+    return Vec3(v.x-t, v.y-t, v.z-t);
 }
 
 __host__ __device__ inline Vec3 operator*(const Vec3& v, float t) {

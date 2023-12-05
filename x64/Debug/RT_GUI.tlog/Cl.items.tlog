@@ -14,5 +14,6 @@ D:\dev\RT_GUI\main.cpp;D:\dev\RT_GUI\x64\Debug\main.obj
 D:\dev\RT_GUI\Mesh.cpp;D:\dev\RT_GUI\x64\Debug\Mesh.obj
 D:\dev\RT_GUI\Model.cpp;D:\dev\RT_GUI\x64\Debug\Model.obj
 D:\dev\RT_GUI\Object3D.cpp;D:\dev\RT_GUI\x64\Debug\Object3D.obj
+D:\dev\RT_GUI\RT_Camera.cpp;D:\dev\RT_GUI\x64\Debug\RT_Camera.obj
 D:\dev\RT_GUI\Shader.cpp;D:\dev\RT_GUI\x64\Debug\Shader.obj
 D:\dev\RT_GUI\Viewport.cpp;D:\dev\RT_GUI\x64\Debug\Viewport.obj

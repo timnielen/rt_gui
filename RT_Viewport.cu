@@ -1,7 +1,10 @@
 #include "RT_Viewport.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 #include <iostream>
+#include "Sphere.h"
 
-
+#include "raytracing.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
@@ -14,7 +17,15 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 	}
 }
 
+
 RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
+	checkCudaErrors(cudaMallocManaged((void**)&cam, sizeof(RT_Camera)));
+
+	checkCudaErrors(cudaMalloc((void**)&objects, 2*sizeof(Hitable*)));
+	checkCudaErrors(cudaMalloc((void**)&scene, sizeof(Hitable*)));
+	init_scene<<<1, 1 >>>(scene, objects);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void RT_Viewport::updateFramebuffer() {
@@ -22,12 +33,13 @@ void RT_Viewport::updateFramebuffer() {
 	ImVec2 vMax = ImGui::GetWindowContentRegionMax();
 	ImVec2 newViewportSize = ImVec2(vMax.x - vMin.x, vMax.y - vMin.y);
 	if (size.x == newViewportSize.x && size.y == newViewportSize.y)
-		return;
+		return ;
 	size = newViewportSize;
 	if (size.x == 0 || size.y == 0)
-		return;
+		return ;
 
-	int floatCount = size.x * size.y * 3;
+
+	cam->update(size.x, size.y);
 	std::cout << "new texture: " << size.x << " " << size.y << std::endl;
 
 	glDeleteTextures(1, &texture);
@@ -45,18 +57,18 @@ void RT_Viewport::updateFramebuffer() {
 
 	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
 	checkCudaErrors(e);
+
+	//init randoms
+	if(d_rand_state != nullptr)
+		checkCudaErrors(cudaFree(d_rand_state));
+	checkCudaErrors(cudaMalloc((void**)&d_rand_state, size.x * size.y * sizeof(curandState)));
+
+	dim3 blocks(size.x / blockW + 1, size.y / blockH + 1);
+	dim3 threads(blockW, blockH);
+	renderInit << <blocks, threads >> > (size.x, size.y, d_rand_state);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 }
-__global__ void renderImage(cudaSurfaceObject_t s, int max_x, int max_y) {
-	int i = threadIdx.x + blockIdx.x * blockDim.x;
-	int j = threadIdx.y + blockIdx.y * blockDim.y;
-	if ((i >= max_x) || (j >= max_y)) return;
-	int pixel_index = j * max_x * 3 + i * 3;
-	float4 data = make_float4(float(i) / max_x, float(j) / max_y, 0.2f, 1.0f);
-	surf2Dwrite(data, s, i * sizeof(float4), j);
-
-}
-
-
 
 void RT_Viewport::render(float deltaTime) {
 	ImGui::Begin("RT Viewport");
@@ -67,14 +79,13 @@ void RT_Viewport::render(float deltaTime) {
 	}
 	invokeRenderProcedure();
 
-	ImGui::Image((void*)texture, size, { 0, 1 }, { 1, 0 });
+	ImGui::Image((void*)texture, size); // , { 0, 1 }, { 1, 0 });
 	ImGui::End();
 }
 
 
 void RT_Viewport::invokeRenderProcedure() {
-	int blockW = 16;
-	int blockH = 16;
+	
 	// Render our buffer
 	dim3 blocks(size.x / blockW + 1, size.y / blockH + 1);
 	dim3 threads(blockW, blockH);
@@ -94,7 +105,7 @@ void RT_Viewport::invokeRenderProcedure() {
 	e = cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc);
 	checkCudaErrors(e);
 
-	renderImage << <blocks, threads >> > (viewCudaSurfaceObject, size.x, size.y);
+	renderImage <<<blocks, threads>>> (viewCudaSurfaceObject, size.x, size.y, cam, scene, d_rand_state, samples, max_steps);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -110,5 +121,11 @@ void RT_Viewport::invokeRenderProcedure() {
 
 RT_Viewport::~RT_Viewport()
 {
+	checkCudaErrors(cudaDeviceSynchronize());
+	free_scene<<<1, 1 >>>(scene, objects, 2);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaFree(objects));
+	checkCudaErrors(cudaFree(scene));
+	checkCudaErrors(cudaFree(cam));
 	glDeleteTextures(1, &texture);
 }
