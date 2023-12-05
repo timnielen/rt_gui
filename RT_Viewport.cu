@@ -68,6 +68,7 @@ void RT_Viewport::updateFramebuffer() {
 	renderInit << <blocks, threads >> > (size.x, size.y, d_rand_state);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+	accumulation = 0;
 }
 
 void RT_Viewport::render(float deltaTime) {
@@ -104,8 +105,8 @@ void RT_Viewport::invokeRenderProcedure() {
 	cudaSurfaceObject_t viewCudaSurfaceObject;
 	e = cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc);
 	checkCudaErrors(e);
-
-	renderImage <<<blocks, threads>>> (viewCudaSurfaceObject, size.x, size.y, cam, scene, d_rand_state, samples, max_steps);
+	accumulation++;
+	renderImage <<<blocks, threads>>> (viewCudaSurfaceObject, size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 

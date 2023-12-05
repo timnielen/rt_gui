@@ -28,11 +28,11 @@ __global__ void free_scene(Hitable** scene, Hitable** objects, unsigned int size
 }
 
 __device__ inline Vec3 random_in_unit_sphere(curandState* local_rand_state) {
-	while (true) {
-		auto p = 2.0f * RANDVEC3 - Vec3(1, 1, 1);
-		if (p.length_squared() < 1)
-			return p;
-	}
+	Vec3 p;
+	do {
+		p = 2.0f * RANDVEC3 - 1.0f;
+	} while (p.length_squared() >= 1.0f);
+	return p;
 }
 
 
@@ -65,24 +65,29 @@ __global__ void renderInit(int max_x, int max_y, curandState* rand_state) {
 	curand_init(6969, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void renderImage(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, curandState* rand_state, int samples, int max_steps) {
+__global__ void renderImage(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	if ((i >= max_x) || (j >= max_y)) return;
 
 	int pixel_index = j * max_x + i;
-	curandState *local_rand_state = &rand_state[pixel_index];
+	curandState* local_rand_state = &rand_state[pixel_index];
 
 	Vec3 col(0, 0, 0);
 	for (int s = 0; s < samples; s++) {
 		float u = float(i + curand_uniform(local_rand_state)) / float(max_x);
 		float v = float(j + curand_uniform(local_rand_state)) / float(max_y);
 		Ray r = cam->getRay(u,v);
-		col += ray_color(r, *scene, rand_state, max_steps);
+		col += ray_color(r, *scene, local_rand_state, max_steps);
 	}
 	col /= (float)samples;
 	//Vec3 col = Vec3(curand_uniform(local_rand_state), curand_uniform(local_rand_state), curand_uniform(local_rand_state));
 	//auto col = Vec3(0.4f, 0.3f, 1.0f);
+	float4 prev_col;
+	surf2Dread(&prev_col, surface, i * sizeof(float4), j);
+	Vec3 prev = Vec3(prev_col.x, prev_col.y, prev_col.z) * (accumulation - 1);
+	col += prev;
+	col /= accumulation;
 	surf2Dwrite(col.toColor(), surface, i * sizeof(float4), j);
 
 }

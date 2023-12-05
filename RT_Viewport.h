@@ -24,6 +24,7 @@ public:
 private:
 	int blockW = 8;
 	int blockH = 8;
+	unsigned int accumulation = 0;
 	curandState* d_rand_state = nullptr;
 	unsigned int texture;
 	ImVec2 size;
