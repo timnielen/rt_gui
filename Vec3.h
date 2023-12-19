@@ -17,12 +17,20 @@ public:
     }
 	__host__ __device__ Vec3() : x(0), y(0), z(0) {};
 	__host__ __device__ Vec3(const float& x, const float& y, const float& z) : x(x), y(y), z(z) {};
+    __host__ __device__ Vec3(const float& x) : x(x), y(x), z(x) {};
     __host__ glm::vec3 toGLM() const {
         return glm::vec3(x, y, z);
     }
     __device__ inline Vec3 toGamma() {
         return Vec3(sqrtf(x), sqrtf(y), sqrtf(z));
     }
+
+    __host__ __device__ bool near_zero() const {
+        // Return true if the vector is close to zero in all dimensions.
+        auto s = 1e-8;
+        return (fabs(x) < s) && (fabs(y) < s) && (fabs(z) < s);
+    }
+
     __host__ __device__ Vec3 operator-() const { return Vec3(-x, -y, -z); }
     __host__ __device__ float operator[](int i) const {
         switch (i) {

@@ -64,8 +64,7 @@ bool RT_Viewport::updateFramebuffer() {
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
-	checkCudaErrors(e);
+	image.init(texture);
 
 	//init randoms
 	if(d_rand_state != nullptr)
@@ -78,7 +77,6 @@ bool RT_Viewport::updateFramebuffer() {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	accumulation = 0;
-
 
 	resizeFinished = true;
 	return true;
@@ -105,37 +103,20 @@ void RT_Viewport::invokeRenderProcedure() {
 	dim3 blocks(size.x / blockW + 1, size.y / blockH + 1);
 	dim3 threads(blockW, blockH);
 
-	auto e = cudaGraphicsMapResources(1, &gfxRes);
-	checkCudaErrors(e);
 
-	cudaArray_t viewCudaArray;
-	e = cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, gfxRes, 0, 0);
-	checkCudaErrors(e);
-	cudaResourceDesc viewCudaArrayResourceDesc;
-	{
-		viewCudaArrayResourceDesc.resType = cudaResourceTypeArray;
-		viewCudaArrayResourceDesc.res.array.array = viewCudaArray;
-	}
-	cudaSurfaceObject_t viewCudaSurfaceObject;
-	e = cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc);
-	checkCudaErrors(e);
+	
 	accumulation++;
-	renderImage <<<blocks, threads>>> (viewCudaSurfaceObject, size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
+	renderImage <<<blocks, threads>>> (image.getSurface(), size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	e = cudaDestroySurfaceObject(viewCudaSurfaceObject);
-	checkCudaErrors(e);
 
-	e = cudaGraphicsUnmapResources(1, &gfxRes);
-	checkCudaErrors(e);
-
-	e = cudaStreamSynchronize(0);
-	checkCudaErrors(e);
+	//checkCudaErrors(cudaStreamSynchronize(0));
 }
 
 RT_Viewport::~RT_Viewport()
 {
+	image.destroy();
 	checkCudaErrors(cudaDeviceSynchronize());
 	free_scene<<<1, 1 >>>(scene, objects, 2);
 	checkCudaErrors(cudaGetLastError());
@@ -143,4 +124,28 @@ RT_Viewport::~RT_Viewport()
 	checkCudaErrors(cudaFree(scene));
 	checkCudaErrors(cudaFree(cam));
 	glDeleteTextures(1, &texture);
+}
+
+void ImageResource::init(unsigned int texture) {
+	if (gfxRes)
+		destroy();
+	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+	checkCudaErrors(e);
+
+	e = cudaGraphicsMapResources(1, &gfxRes);
+	checkCudaErrors(e);
+
+	cudaArray_t viewCudaArray;
+	checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, gfxRes, 0, 0));
+	cudaResourceDesc viewCudaArrayResourceDesc;
+	{
+		viewCudaArrayResourceDesc.resType = cudaResourceTypeArray;
+		viewCudaArrayResourceDesc.res.array.array = viewCudaArray;
+	}
+	checkCudaErrors(cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc));
+}
+
+void ImageResource::destroy() {
+	checkCudaErrors(cudaGraphicsUnmapResources(1, &gfxRes));
+	checkCudaErrors(cudaDestroySurfaceObject(viewCudaSurfaceObject));
 }

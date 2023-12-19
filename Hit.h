@@ -2,11 +2,15 @@
 #include "Vec3.h"
 #include "Ray.h"
 
-struct HitRecord {
+class Material;
+
+class HitRecord {
+public:
 	Point3 p;
 	Vec3 normal;
 	float t;
 	bool front_face;
+	Material* mat;
 
 	__device__ __host__ void set_face_normal(const Ray& r, const Vec3& outward_normal) {
 		// Sets the hit record normal vector.

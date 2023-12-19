@@ -9,6 +9,16 @@
 
 #include <curand_kernel.h>
 
+struct ImageResource {
+	cudaGraphicsResource_t gfxRes = NULL;
+	cudaSurfaceObject_t viewCudaSurfaceObject;
+	void init(unsigned int texture);
+	void destroy();
+	cudaSurfaceObject_t getSurface() const {
+		return viewCudaSurfaceObject;
+	}
+};
+
 class RT_Viewport {
 public:
 	RT_Viewport();
@@ -29,6 +39,6 @@ private:
 	curandState* d_rand_state = nullptr;
 	unsigned int texture;
 	ImVec2 size;
-	cudaGraphicsResource_t gfxRes;
+	ImageResource image;
 	bool updateFramebuffer();
 };

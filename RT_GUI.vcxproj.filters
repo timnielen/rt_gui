@@ -55,9 +55,6 @@
     <ClCompile Include="Shader.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="Object3D.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="Camera.cpp">
       <Filter>sources</Filter>
     </ClCompile>
@@ -144,9 +141,6 @@
     <ClInclude Include="Shader.h">
       <Filter>includes</Filter>
     </ClInclude>
-    <ClInclude Include="Object3D.h">
-      <Filter>includes</Filter>
-    </ClInclude>
     <ClInclude Include="Viewport.h">
       <Filter>includes</Filter>
     </ClInclude>
@@ -179,6 +173,9 @@
       <Filter>includes</Filter>
     </ClInclude>
     <ClInclude Include="RT_Camera.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
       <Filter>includes</Filter>
     </ClInclude>
   </ItemGroup>

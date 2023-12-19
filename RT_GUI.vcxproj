@@ -101,7 +101,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
-    <ClCompile Include="Object3D.cpp" />
     <ClCompile Include="RT_Camera.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Viewport.cpp" />
@@ -131,12 +130,12 @@
     <ClInclude Include="extern\imgui\imstb_truetype.h" />
     <ClInclude Include="File.h" />
     <ClInclude Include="Grid.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="RT_Camera.h" />
     <ClInclude Include="Helper.h" />
     <ClInclude Include="Hit.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
-    <ClInclude Include="Object3D.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="raytracing.h" />
     <ClInclude Include="RT_Viewport.h" />

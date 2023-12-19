@@ -2,7 +2,6 @@
 #include "imgui.h"
 #include "Shader.h"
 #include <cstdbool>
-#include "Object3D.h"
 #include "Camera.h"
 #include "Grid.h"
 #include "Model.h"
