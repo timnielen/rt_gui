@@ -31,6 +31,10 @@ __device__ inline Vec3 random_on_hemisphere(const Vec3& normal, curandState* loc
 		return -on_unit_sphere;
 }
 
+__device__ Vec3 reflect(const Vec3& v, const Vec3& n) {
+	return v - 2 * dot(v, n) * n;
+}
+
 class Material {
 public:
     __device__ virtual bool scatter(
@@ -54,4 +58,21 @@ public:
 		scattered = Ray(rec.p, dir);
 		return true;
 	}
+};
+
+class Metal : public Material {
+public:
+	__device__ Metal(const Vec3& a, float roughness) : albedo(a), roughness(roughness) {}
+
+	__device__ bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state)
+		const override {
+		Vec3 reflected = reflect(d_normalize(r_in.direction), rec.normal);
+		scattered = Ray(rec.p, reflected + roughness * random_unit_vector(local_rand_state));
+		attenuation = albedo;
+		return dot(scattered.direction, rec.normal) > 0;
+	}
+
+private:
+	Vec3 albedo;
+	float roughness;
 };

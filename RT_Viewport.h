@@ -39,6 +39,6 @@ private:
 	curandState* d_rand_state = nullptr;
 	unsigned int texture;
 	ImVec2 size;
-	ImageResource image;
+	ImageResource renderedImage;
 	bool updateFramebuffer();
 };

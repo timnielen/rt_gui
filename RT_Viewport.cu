@@ -21,7 +21,7 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	checkCudaErrors(cudaMallocManaged((void**)&cam, sizeof(RT_Camera)));
 
-	checkCudaErrors(cudaMalloc((void**)&objects, 2*sizeof(Hitable*)));
+	checkCudaErrors(cudaMalloc((void**)&objects, 4*sizeof(Hitable*)));
 	checkCudaErrors(cudaMalloc((void**)&scene, sizeof(Hitable*)));
 	init_scene<<<1, 1 >>>(scene, objects);
 	checkCudaErrors(cudaGetLastError());
@@ -64,7 +64,7 @@ bool RT_Viewport::updateFramebuffer() {
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	image.init(texture);
+	renderedImage.init(texture);
 
 	//init randoms
 	if(d_rand_state != nullptr)
@@ -73,7 +73,7 @@ bool RT_Viewport::updateFramebuffer() {
 
 	dim3 blocks(size.x / blockW + 1, size.y / blockH + 1);
 	dim3 threads(blockW, blockH);
-	renderInit << <blocks, threads >> > (size.x, size.y, d_rand_state);
+	render_init << <blocks, threads >> > (size.x, size.y, d_rand_state);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	accumulation = 0;
@@ -106,7 +106,7 @@ void RT_Viewport::invokeRenderProcedure() {
 
 	
 	accumulation++;
-	renderImage <<<blocks, threads>>> (image.getSurface(), size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
+	render_image<<<blocks, threads>>> (renderedImage.getSurface(), size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -116,9 +116,9 @@ void RT_Viewport::invokeRenderProcedure() {
 
 RT_Viewport::~RT_Viewport()
 {
-	image.destroy();
+	renderedImage.destroy();
 	checkCudaErrors(cudaDeviceSynchronize());
-	free_scene<<<1, 1 >>>(scene, objects, 2);
+	free_scene<<<1, 1 >>>(scene, objects, 4);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaFree(objects));
 	checkCudaErrors(cudaFree(scene));

@@ -6,7 +6,7 @@ __device__ __host__ void RT_Camera::update(const int& x, const int& y) {
 	auto focal_length = 1.0;
 	auto viewport_height = 2.0;
 	auto viewport_width = viewport_height * (static_cast<float>(x) / y);
-	camera_center = Point3(0, 0, 0);
+	camera_center = Point3(0, 0, 1);
 
 	// Calculate the vectors across the horizontal and down the vertical viewport edges.
 	viewport_u = Vec3(viewport_width, 0, 0);

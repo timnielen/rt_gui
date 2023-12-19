@@ -11,10 +11,13 @@
 __global__ void init_scene(Hitable** scene, Hitable** objects) {
 	if (threadIdx.x != 0 || blockIdx.x != 0)
 		return;
-	objects[0] = new Sphere(Vec3(0, 0, -1), 0.5f, new Lambertian(Vec3(0.5f, 0.2f, 0.1f)));
-	objects[1] = new Sphere(Vec3(0, -100.5f, -1), 100, new Lambertian(Vec3(0.3f)));
+	objects[0] = new Sphere(Vec3(0, -100.5f, -1), 100, new Lambertian(Vec3(0.3f)));
+	objects[1] = new Sphere(Vec3(-1, 0, -1), 0.5f, new Metal(Vec3(1), 0.1f));
+	objects[2] = new Sphere(Vec3(1, 0, -1), 0.5f, new Metal(Vec3(1.0f, 0.2f, 0.1f), 0.5f));
+	objects[3] = new Sphere(Vec3(0, 0, -1), 0.5f, new Lambertian(Vec3(0.2f, 1.0f, 0.5f)));
 
-	*scene = new HitableList(objects, 2);
+
+	*scene = new HitableList(objects, 4);
 }
 
 __global__ void free_scene(Hitable** scene, Hitable** objects, unsigned int sizeObjects) {
@@ -50,7 +53,7 @@ __device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, i
 	return Vec3(0.0f); // exceeded recursion
 }
 
-__global__ void renderInit(int max_x, int max_y, curandState* rand_state) {
+__global__ void render_init(int max_x, int max_y, curandState* rand_state) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	if ((i >= max_x) || (j >= max_y)) return;
@@ -59,7 +62,7 @@ __global__ void renderInit(int max_x, int max_y, curandState* rand_state) {
 	curand_init(6969, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void renderImage(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, curandState* rand_state, int samples, int max_steps, int accumulation) {
+__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	if ((i >= max_x) || (j >= max_y)) return;
