@@ -22,6 +22,7 @@ public:
 	int max_steps = 5;
 	
 private:
+	bool resizeFinished = false;
 	int blockW = 8;
 	int blockH = 8;
 	unsigned int accumulation = 0;
@@ -29,5 +30,5 @@ private:
 	unsigned int texture;
 	ImVec2 size;
 	cudaGraphicsResource_t gfxRes;
-	void updateFramebuffer();
+	bool updateFramebuffer();
 };

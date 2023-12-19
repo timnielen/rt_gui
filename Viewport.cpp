@@ -255,6 +255,7 @@ void Viewport::render(float deltaTime) {
 	glDrawArrays(GL_POINTS, 0, 1);
 	glLineWidth(1.0f);
 
+
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
 	glBlitFramebuffer(0, 0, size.x, size.y, 0, 0, size.x, size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);

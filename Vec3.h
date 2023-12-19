@@ -5,6 +5,9 @@
 #include <iostream>
 #include "glm/glm.hpp"
 
+#define __CUDA_INTERNAL_COMPILATION__
+#include <math_functions.h>
+
 class Vec3
 {
 public:
@@ -16,6 +19,9 @@ public:
 	__host__ __device__ Vec3(const float& x, const float& y, const float& z) : x(x), y(y), z(z) {};
     __host__ glm::vec3 toGLM() const {
         return glm::vec3(x, y, z);
+    }
+    __device__ inline Vec3 toGamma() {
+        return Vec3(sqrtf(x), sqrtf(y), sqrtf(z));
     }
     __host__ __device__ Vec3 operator-() const { return Vec3(-x, -y, -z); }
     __host__ __device__ float operator[](int i) const {
@@ -138,7 +144,10 @@ __host__ __device__ inline Vec3 cross(const Vec3& u, const Vec3& v) {
         u.x * v.y - u.y * v.x);
 }
 
-__host__ __device__ inline Vec3 normalize(Vec3 v) {
-    return v / v.length();
+__host__ inline Vec3 normalize(Vec3 v) {
+    return v * (1 / v.length());
 }
 
+__device__ inline Vec3 d_normalize(Vec3 v) {
+    return v * rsqrtf(v.length_squared());
+}

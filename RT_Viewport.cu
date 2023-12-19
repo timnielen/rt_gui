@@ -28,15 +28,24 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	checkCudaErrors(cudaDeviceSynchronize());
 }
 
-void RT_Viewport::updateFramebuffer() {
+//returns wether to the current framebuffer is drawable
+bool RT_Viewport::updateFramebuffer() {
 	ImVec2 vMin = ImGui::GetWindowContentRegionMin();
 	ImVec2 vMax = ImGui::GetWindowContentRegionMax();
 	ImVec2 newViewportSize = ImVec2(vMax.x - vMin.x, vMax.y - vMin.y);
 	if (size.x == newViewportSize.x && size.y == newViewportSize.y)
-		return ;
+		return resizeFinished;
+
+	//is currently resizing? -> not drawable
+	if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+		return false;
+
+	resizeFinished = false;
 	size = newViewportSize;
+
+	//is window hidden? -> not drawable
 	if (size.x == 0 || size.y == 0)
-		return ;
+		return false;
 
 
 	cam->update(size.x, size.y);
@@ -69,16 +78,21 @@ void RT_Viewport::updateFramebuffer() {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	accumulation = 0;
+
+
+	resizeFinished = true;
+	return true;
 }
 
 void RT_Viewport::render(float deltaTime) {
 	ImGui::Begin("RT Viewport");
-	updateFramebuffer();
+	bool fbDrawable = updateFramebuffer();
 	if (size.x <= 0 || size.y <= 0) {
 		ImGui::End();
 		return;
 	}
-	invokeRenderProcedure();
+	if (fbDrawable)
+		invokeRenderProcedure();
 
 	ImGui::Image((void*)texture, size); // , { 0, 1 }, { 1, 0 });
 	ImGui::End();
