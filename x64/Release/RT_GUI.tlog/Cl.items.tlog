@@ -1,9 +1,0 @@
-D:\dev\RT_GUI\Application.cpp;D:\dev\RT_GUI\x64\Release\Application.obj
-D:\dev\RT_GUI\imgui\backends\imgui_impl_glfw.cpp;D:\dev\RT_GUI\x64\Release\imgui_impl_glfw.obj
-D:\dev\RT_GUI\imgui\backends\imgui_impl_opengl3.cpp;D:\dev\RT_GUI\x64\Release\imgui_impl_opengl3.obj
-D:\dev\RT_GUI\imgui\imgui.cpp;D:\dev\RT_GUI\x64\Release\imgui.obj
-D:\dev\RT_GUI\imgui\imgui_demo.cpp;D:\dev\RT_GUI\x64\Release\imgui_demo.obj
-D:\dev\RT_GUI\imgui\imgui_draw.cpp;D:\dev\RT_GUI\x64\Release\imgui_draw.obj
-D:\dev\RT_GUI\imgui\imgui_tables.cpp;D:\dev\RT_GUI\x64\Release\imgui_tables.obj
-D:\dev\RT_GUI\imgui\imgui_widgets.cpp;D:\dev\RT_GUI\x64\Release\imgui_widgets.obj
-D:\dev\RT_GUI\main.cpp;D:\dev\RT_GUI\x64\Release\main.obj

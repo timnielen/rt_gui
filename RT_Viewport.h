@@ -13,6 +13,8 @@ struct ImageResource {
 	cudaGraphicsResource_t gfxRes = NULL;
 	cudaSurfaceObject_t viewCudaSurfaceObject;
 	void init(unsigned int texture);
+	void map();
+	void unmap();
 	void destroy();
 	cudaSurfaceObject_t getSurface() const {
 		return viewCudaSurfaceObject;
@@ -33,8 +35,8 @@ public:
 	
 private:
 	bool resizeFinished = false;
-	int blockW = 8;
-	int blockH = 8;
+	int blockW = 16;
+	int blockH = 16;
 	unsigned int accumulation = 0;
 	curandState* d_rand_state = nullptr;
 	unsigned int texture;

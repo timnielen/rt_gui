@@ -17,8 +17,17 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 	}
 }
 
+__global__
+void add(int n, float* x, float* y)
+{
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+	if (i >= n) return;
+	y[i] = x[i] + y[i];
+}
+
 
 RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
+	glGenTextures(1, &texture);
 	checkCudaErrors(cudaMallocManaged((void**)&cam, sizeof(RT_Camera)));
 
 	checkCudaErrors(cudaMalloc((void**)&objects, 4*sizeof(Hitable*)));
@@ -26,8 +35,12 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	init_scene<<<1, 1 >>>(scene, objects);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+
+	
 }
 
+
+float4* data = nullptr;
 //returns wether to the current framebuffer is drawable
 bool RT_Viewport::updateFramebuffer() {
 	ImVec2 vMin = ImGui::GetWindowContentRegionMin();
@@ -47,20 +60,23 @@ bool RT_Viewport::updateFramebuffer() {
 	if (size.x == 0 || size.y == 0)
 		return false;
 
-
 	cam->update(size.x, size.y);
 	std::cout << "new texture: " << size.x << " " << size.y << std::endl;
-
 	glDeleteTextures(1, &texture);
 	glGenTextures(1, &texture);
-	glEnable(GL_TEXTURE_2D);
-	glGenTextures(1, &texture);
+
+	if (data != nullptr) {
+		cudaFree(data); 
+	}
+	cudaMallocManaged(&data, sizeof(float4) * size.x * size.y);
+	for (int i = 0; i < size.x * size.y; i++)
+		data[i] = make_float4(0.1f, 0.5f, 1.0f, 1.0f);
 
 	glBindTexture(GL_TEXTURE_2D, texture);
 	{
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA, GL_FLOAT, data);
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -82,6 +98,7 @@ bool RT_Viewport::updateFramebuffer() {
 	return true;
 }
 
+bool first = true;
 void RT_Viewport::render(float deltaTime) {
 	ImGui::Begin("RT Viewport");
 	bool fbDrawable = updateFramebuffer();
@@ -89,8 +106,10 @@ void RT_Viewport::render(float deltaTime) {
 		ImGui::End();
 		return;
 	}
-	if (fbDrawable)
+	if (fbDrawable && !first) {
 		invokeRenderProcedure();
+	}
+	first = false;
 
 	ImGui::Image((void*)texture, size); // , { 0, 1 }, { 1, 0 });
 	ImGui::End();
@@ -98,24 +117,23 @@ void RT_Viewport::render(float deltaTime) {
 
 
 void RT_Viewport::invokeRenderProcedure() {
-	
 	// Render our buffer
 	dim3 blocks(size.x / blockW + 1, size.y / blockH + 1);
 	dim3 threads(blockW, blockH);
 
-
-	
 	accumulation++;
+	renderedImage.map();
 	render_image<<<blocks, threads>>> (renderedImage.getSurface(), size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+	renderedImage.unmap();
 
-
-	//checkCudaErrors(cudaStreamSynchronize(0));
+	checkCudaErrors(cudaStreamSynchronize(0));
 }
 
 RT_Viewport::~RT_Viewport()
 {
+	cudaFree(data);
 	renderedImage.destroy();
 	checkCudaErrors(cudaDeviceSynchronize());
 	free_scene<<<1, 1 >>>(scene, objects, 4);
@@ -127,13 +145,15 @@ RT_Viewport::~RT_Viewport()
 }
 
 void ImageResource::init(unsigned int texture) {
-	if (gfxRes)
+	if (gfxRes != NULL)
 		destroy();
-	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore);
 	checkCudaErrors(e);
+}
 
-	e = cudaGraphicsMapResources(1, &gfxRes);
-	checkCudaErrors(e);
+void ImageResource::map() {
+
+	checkCudaErrors(cudaGraphicsMapResources(1, &gfxRes));
 
 	cudaArray_t viewCudaArray;
 	checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, gfxRes, 0, 0));
@@ -145,7 +165,12 @@ void ImageResource::init(unsigned int texture) {
 	checkCudaErrors(cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc));
 }
 
-void ImageResource::destroy() {
+void ImageResource::unmap() {
 	checkCudaErrors(cudaGraphicsUnmapResources(1, &gfxRes));
+}
+
+void ImageResource::destroy() {
+	checkCudaErrors(cudaGraphicsUnregisterResource(gfxRes));
+	gfxRes = NULL;
 	checkCudaErrors(cudaDestroySurfaceObject(viewCudaSurfaceObject));
 }
