@@ -27,6 +27,8 @@ ipch
 
 assets/
 
+x64/
+
 ## Getting files created in JSON/Schemas/Catalog/ from a VS2022 update
 JSON/
 
