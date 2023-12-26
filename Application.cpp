@@ -50,7 +50,7 @@ void App::renderUI(ImGuiIO& io) {
 
 App::~App()
 {
-	//delete rt_viewport;
-	//delete viewport;
+	delete rt_viewport;
+	delete viewport;
 	shader.destroy();
 }

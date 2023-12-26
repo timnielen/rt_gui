@@ -27,6 +27,23 @@ void add(int n, float* x, float* y)
 
 
 RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
+	unsigned int dCount = 0;
+	int devices[10];
+	cudaDeviceProp prop;
+	checkCudaErrors(cudaGLGetDevices(&dCount, devices, 10, cudaGLDeviceListAll));
+	std::cout << "Devices used to render image (OpenGL):" << std::endl;
+	for (int i = 0; i < dCount; i++) {
+		cudaGetDeviceProperties(&prop, devices[i]);
+		std::cout << devices[i] << "\t" << prop.name << std::endl;
+	}
+	int cudaDevice;
+	cudaGetDevice(&cudaDevice);
+	cudaGetDeviceProperties(&prop, cudaDevice);
+	std::cout << "Cuda device:" << std::endl;
+	std::cout << cudaDevice << "\t" << prop.name << std::endl;
+	//checkCudaErrors(cudaSetDevice(devices[0]));
+
+
 	glGenTextures(1, &texture);
 	checkCudaErrors(cudaMallocManaged((void**)&cam, sizeof(RT_Camera)));
 
