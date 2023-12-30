@@ -3,7 +3,7 @@
 #include "device_launch_parameters.h"
 #include <iostream>
 #include "Sphere.h"
-
+#include "File.h"
 #include "raytracing.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
@@ -24,7 +24,6 @@ void add(int n, float* x, float* y)
 	if (i >= n) return;
 	y[i] = x[i] + y[i];
 }
-
 
 RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	unsigned int dCount = 0;
@@ -53,7 +52,8 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	
+	hdri.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
+
 }
 
 
@@ -139,19 +139,22 @@ void RT_Viewport::invokeRenderProcedure() {
 	dim3 threads(blockW, blockH);
 
 	accumulation++;
-	renderedImage.map();
-	render_image<<<blocks, threads>>> (renderedImage.getSurface(), size.x, size.y, cam, scene, d_rand_state, samples, max_steps, accumulation);
+	hdri.mapTexture();
+	renderedImage.mapSurface();
+	render_image<<<blocks, threads>>> (renderedImage.getSurface(), size.x, size.y, cam, scene, hdri.getTexture(), d_rand_state, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	renderedImage.unmap();
+	hdri.unmap();
 
-	checkCudaErrors(cudaStreamSynchronize(0));
+	//checkCudaErrors(cudaStreamSynchronize(0));
 }
 
 RT_Viewport::~RT_Viewport()
 {
 	cudaFree(data);
 	renderedImage.destroy();
+	hdri.destroy();
 	checkCudaErrors(cudaDeviceSynchronize());
 	free_scene<<<1, 1 >>>(scene, objects, 4);
 	checkCudaErrors(cudaGetLastError());
@@ -159,16 +162,18 @@ RT_Viewport::~RT_Viewport()
 	checkCudaErrors(cudaFree(scene));
 	checkCudaErrors(cudaFree(cam));
 	glDeleteTextures(1, &texture);
+	glDeleteTextures(1, &hdri.texture);
 }
 
-void ImageResource::init(unsigned int texture) {
+void ImageResource::init(unsigned int tex, int flags) {
+	texture = tex;
 	if (gfxRes != NULL)
 		destroy();
-	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore);
+	auto e = cudaGraphicsGLRegisterImage(&gfxRes, texture, GL_TEXTURE_2D, flags);
 	checkCudaErrors(e);
 }
 
-void ImageResource::map() {
+void ImageResource::mapSurface() {
 
 	checkCudaErrors(cudaGraphicsMapResources(1, &gfxRes));
 
@@ -180,6 +185,28 @@ void ImageResource::map() {
 		viewCudaArrayResourceDesc.res.array.array = viewCudaArray;
 	}
 	checkCudaErrors(cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc));
+}
+
+void ImageResource::mapTexture() {
+
+	checkCudaErrors(cudaGraphicsMapResources(1, &gfxRes));
+
+	struct cudaTextureDesc texDesc;
+	memset(&texDesc, 0, sizeof(texDesc));
+	texDesc.addressMode[0] = cudaAddressModeWrap;
+	texDesc.addressMode[1] = cudaAddressModeWrap;
+	texDesc.filterMode = cudaFilterModePoint;
+	texDesc.readMode = cudaReadModeElementType;
+	texDesc.normalizedCoords = 1;
+
+	cudaArray_t viewCudaArray;
+	checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, gfxRes, 0, 0));
+	cudaResourceDesc viewCudaArrayResourceDesc;
+	{
+		viewCudaArrayResourceDesc.resType = cudaResourceTypeArray;
+		viewCudaArrayResourceDesc.res.array.array = viewCudaArray;
+	}
+	checkCudaErrors(cudaCreateTextureObject(&viewCudaTextureObject, &viewCudaArrayResourceDesc, &texDesc, NULL));
 }
 
 void ImageResource::unmap() {

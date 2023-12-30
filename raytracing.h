@@ -62,9 +62,11 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
 	curand_init(6969, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, curandState* rand_state, int samples, int max_steps, int accumulation) {
+__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
+	float u = float(i / float(max_x));
+	float v = float(j / float(max_y));
 	if ((i >= max_x) || (j >= max_y)) return;
 
 	int pixel_index = j * max_x + i;
@@ -80,14 +82,19 @@ __global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, 
 	col /= (float)samples;
 	//Vec3 col = Vec3(curand_uniform(local_rand_state), curand_uniform(local_rand_state), curand_uniform(local_rand_state));
 	//auto col = Vec3(0.4f, 0.3f, 1.0f);
-	float4 prev_col;
-	surf2Dread(&prev_col, surface, i * sizeof(float4), j);
-	Vec3 prev = Vec3(prev_col.x, prev_col.y, prev_col.z);
+	//float4 prev_col;
+	//surf2Dread(&prev_col, surface, i * sizeof(float4), j);
+	//Vec3 prev = Vec3(prev_col.x, prev_col.y, prev_col.z);
+	//
+	////reverse Gamma correction
+	//prev = prev * prev;
+	//prev *= (accumulation - 1);
+	//col += prev;
+	//col /= accumulation;
+	//surf2Dwrite(col.toGamma().toColor(), surface, i * sizeof(float4), j);
 	
-	//reverse Gamma correction
-	prev = prev * prev;
-	prev *= (accumulation - 1);
-	col += prev;
-	col /= accumulation;
-	surf2Dwrite(col.toGamma().toColor(), surface, i * sizeof(float4), j);
+	uchar4 prev_col = tex2D<uchar4>(hdri, u, v);
+	float4 color = make_float4((float)prev_col.x / 256.0f, (float)prev_col.y / 256.0f, (float)prev_col.z / 256.0f, (float)prev_col.w / 256.0f);
+	surf2Dwrite(color, surface, i * sizeof(float4), j);
+
 }

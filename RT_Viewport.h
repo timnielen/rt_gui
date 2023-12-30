@@ -12,12 +12,18 @@
 struct ImageResource {
 	cudaGraphicsResource_t gfxRes = NULL;
 	cudaSurfaceObject_t viewCudaSurfaceObject;
-	void init(unsigned int texture);
-	void map();
+	cudaTextureObject_t viewCudaTextureObject;
+	unsigned int texture;
+	void init(unsigned int tex, int flags = cudaGraphicsRegisterFlagsSurfaceLoadStore);
+	void mapTexture();
+	void mapSurface();
 	void unmap();
 	void destroy();
 	cudaSurfaceObject_t getSurface() const {
 		return viewCudaSurfaceObject;
+	}
+	cudaTextureObject_t getTexture() const {
+		return viewCudaTextureObject;
 	}
 };
 
@@ -34,6 +40,7 @@ public:
 	int max_steps = 5;
 	
 private:
+
 	bool resizeFinished = false;
 	int blockW = 16;
 	int blockH = 16;
@@ -42,5 +49,6 @@ private:
 	unsigned int texture;
 	ImVec2 size;
 	ImageResource renderedImage;
+	ImageResource hdri;
 	bool updateFramebuffer();
 };
