@@ -52,7 +52,7 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	hdri.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
+	hdri.init(load_texture("./assets/hdri/rural_crossroads_4k.hdr"));
 
 }
 
