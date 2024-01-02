@@ -102,7 +102,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
-    <ClCompile Include="RT_Camera.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
@@ -132,7 +131,6 @@
     <ClInclude Include="File.h" />
     <ClInclude Include="Grid.h" />
     <ClInclude Include="Material.h" />
-    <ClInclude Include="RT_Camera.h" />
     <ClInclude Include="Helper.h" />
     <ClInclude Include="Hit.h" />
     <ClInclude Include="Mesh.h" />

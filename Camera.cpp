@@ -7,8 +7,15 @@ void Camera::setPosition(glm::vec3 pos) {
 	updateView();
 }
 
-void Camera::setPerspective(float fov, float aspect, float near, float far) {
+void Camera::setProjection(float fov, float width, float height, float near, float far) {
+	float aspect = width / height;
 	projection = glm::perspective(glm::radians(fov), aspect, near, far);
+
+	viewportU = -2 * near * glm::tan(glm::radians(fov) / 2.0f);
+	viewportV = viewportU / aspect;
+	pixelDeltaU = viewportU / width;
+	pixelDeltaV = viewportV / height;
+	focalLength = near;
 }
 
 void Camera::updateView() {
@@ -22,6 +29,10 @@ void Camera::updateView() {
 	up = glm::cross(direction, right);
 
 	view = glm::lookAt(position, position + direction, up);
+
+	// Calculate the location of the upper left pixel.
+	Vec3 upperLeft = position + (direction * focalLength) - (right * viewportU / 2) - (up * viewportV / 2);
+	pixel00_loc = upperLeft + 0.5 * (pixelDeltaU * right + pixelDeltaV * up);
 }
 
 void Camera::useInShader(Shader shader) {

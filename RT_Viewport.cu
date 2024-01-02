@@ -44,7 +44,9 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 
 
 	glGenTextures(1, &texture);
-	checkCudaErrors(cudaMallocManaged((void**)&cam, sizeof(RT_Camera)));
+	checkCudaErrors(cudaMallocManaged((void**)&camera, sizeof(Camera)));
+	*camera = Camera();
+	camera->setPosition(glm::vec3(0, 0, 3));
 
 	checkCudaErrors(cudaMalloc((void**)&objects, 4*sizeof(Hitable*)));
 	checkCudaErrors(cudaMalloc((void**)&scene, sizeof(Hitable*)));
@@ -77,7 +79,10 @@ bool RT_Viewport::updateFramebuffer() {
 	if (size.x == 0 || size.y == 0)
 		return false;
 
-	cam->update(size.x, size.y);
+	//cam->updateViewportSize(size.x, size.y);
+	camera->setProjection(45.0f, size.x, size.y, 0.1f, 1000.0f);
+	camera->updateView();
+
 	std::cout << "new texture: " << size.x << " " << size.y << std::endl;
 	glDeleteTextures(1, &texture);
 	glGenTextures(1, &texture);
@@ -123,12 +128,64 @@ void RT_Viewport::render(float deltaTime) {
 		ImGui::End();
 		return;
 	}
+
+	//update camera
+	if (ImGui::IsWindowFocused()) {
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			ImVec2 mousePos = ImGui::GetMousePos();
+			if (firstMouse) {
+				firstMouse = false;
+				lastMousePos = mousePos;
+			}
+			else {
+				float sensitivity = 0.1f;
+				ImVec2 offset = { sensitivity * (mousePos.x - lastMousePos.x), sensitivity * (lastMousePos.y - mousePos.y) };
+				lastMousePos = mousePos;
+
+				camera->yaw += offset.x;
+				camera->pitch += offset.y;
+
+				if (camera->pitch > 89.0f)
+					camera->pitch = 89.0f;
+				if (camera->pitch < -89.0f)
+					camera->pitch = -89.0f;
+
+				camera->updateView();
+				accumulation = 0;
+			}
+		}
+		else
+			firstMouse = true;
+
+		float cameraSpeed = 2.0f;
+		cameraSpeed *= deltaTime;
+		//std::cout << deltaTime << std::endl;
+		glm::vec3 moveDir = glm::vec3(0);
+		if (ImGui::IsKeyDown(ImGuiKey_W))
+			moveDir += camera->direction;
+		if (ImGui::IsKeyDown(ImGuiKey_A))
+			moveDir += camera->right;
+		if (ImGui::IsKeyDown(ImGuiKey_S))
+			moveDir -= camera->direction;
+		if (ImGui::IsKeyDown(ImGuiKey_D))
+			moveDir -= camera->right;
+
+		if (moveDir != glm::vec3(0)) {
+			moveDir = glm::normalize(moveDir) * cameraSpeed;
+			camera->position += moveDir;
+			camera->updateView();
+			accumulation = 0;
+		}
+	}
+	else
+		firstMouse = true;
+
 	if (fbDrawable && !first) {
 		invokeRenderProcedure();
 	}
 	first = false;
 
-	ImGui::Image((void*)texture, size); // , { 0, 1 }, { 1, 0 });
+	ImGui::Image((void*)texture, size);// , { 0, 1 }, { 1, 0 });
 	ImGui::End();
 }
 
@@ -141,7 +198,7 @@ void RT_Viewport::invokeRenderProcedure() {
 	accumulation++;
 	hdri.mapTexture();
 	renderedImage.mapSurface();
-	render_image<<<blocks, threads>>> (renderedImage.getSurface(), size.x, size.y, cam, scene, hdri.getTexture(), d_rand_state, samples, max_steps, accumulation);
+	render_image<<<blocks, threads>>> (renderedImage.getSurface(), size.x, size.y, camera, scene, hdri.getTexture(), d_rand_state, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	renderedImage.unmap();
@@ -160,7 +217,7 @@ RT_Viewport::~RT_Viewport()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaFree(objects));
 	checkCudaErrors(cudaFree(scene));
-	checkCudaErrors(cudaFree(cam));
+	checkCudaErrors(cudaFree(camera));
 	glDeleteTextures(1, &texture);
 	glDeleteTextures(1, &hdri.texture);
 }

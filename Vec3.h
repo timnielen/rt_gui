@@ -15,9 +15,10 @@ public:
     operator glm::vec3() {
         return glm::vec3(x, y, z);
     }
-	__host__ __device__ Vec3() : x(0), y(0), z(0) {};
-	__host__ __device__ Vec3(const float& x, const float& y, const float& z) : x(x), y(y), z(z) {};
-    __host__ __device__ Vec3(const float& x) : x(x), y(x), z(x) {};
+	__host__ __device__ Vec3() : x(0), y(0), z(0) {}
+	__host__ __device__ Vec3(const float& x, const float& y, const float& z) : x(x), y(y), z(z) {}
+    __host__ __device__ Vec3(const float& x) : x(x), y(x), z(x) {}
+    __host__ __device__ Vec3(glm::vec3 v) : x(v.x), y(v.y), z(v.z) {}
     __host__ glm::vec3 toGLM() const {
         return glm::vec3(x, y, z);
     }

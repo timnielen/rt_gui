@@ -70,9 +70,6 @@
     <ClCompile Include="Model.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="RT_Camera.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
@@ -170,9 +167,6 @@
       <Filter>includes</Filter>
     </ClInclude>
     <ClInclude Include="raytracing.h">
-      <Filter>includes</Filter>
-    </ClInclude>
-    <ClInclude Include="RT_Camera.h">
       <Filter>includes</Filter>
     </ClInclude>
     <ClInclude Include="Material.h">

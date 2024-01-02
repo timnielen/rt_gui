@@ -5,7 +5,7 @@
 #include "Vec3.h"
 #include "Ray.h"
 #include "Hit.h"
-#include "RT_Camera.h"
+#include "Camera.h"
 
 #include <curand_kernel.h>
 
@@ -33,14 +33,15 @@ public:
 	~RT_Viewport();
 	void render(float deltaTime);
 	void invokeRenderProcedure();
-	RT_Camera *cam;
+	Camera *camera;
 	Hitable** objects;
 	Hitable** scene;
 	int samples = 1;
 	int max_steps = 5;
 	
 private:
-
+	bool firstMouse = true;
+	ImVec2 lastMousePos = { 0,0 };
 	bool resizeFinished = false;
 	int blockW = 16;
 	int blockH = 16;

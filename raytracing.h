@@ -3,7 +3,7 @@
 #include "Sphere.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "RT_Camera.h"
+#include "Camera.h"
 #include "Material.h"
 #include <curand_kernel.h>
 
@@ -76,7 +76,7 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
 	curand_init(6969, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RT_Camera *cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
+__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, Camera* cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	float u = float(i / float(max_x));

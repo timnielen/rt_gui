@@ -61,7 +61,7 @@ void Viewport::setShader(const Shader& sh) {
 }
 
 void Viewport::updateCameraProjection() {
-	camera.setPerspective(fov, size.x / size.y, nearPlane, farPlane);
+	camera.setProjection(fov, size.x, size.y, nearPlane, farPlane);
 }
 
 void Viewport::updateFramebuffer() {
@@ -263,7 +263,7 @@ void Viewport::render(float deltaTime) {
 	//unbind Framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	ImGui::Image((void*)screenTexture, size, { 0, 1 }, { 1, 0 });
+	ImGui::Image((void*)screenTexture, size , { 0, 1 }, { 1, 0 });
 	ImGui::End();
 }
 
