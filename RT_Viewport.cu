@@ -5,6 +5,7 @@
 #include "Sphere.h"
 #include "File.h"
 #include "raytracing.h"
+#include "Mesh.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
@@ -48,8 +49,9 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	*camera = Camera();
 	camera->setPosition(glm::vec3(0, 0, 3));
 
-	checkCudaErrors(cudaMalloc((void**)&objects, 4*sizeof(Hitable*)));
-	checkCudaErrors(cudaMalloc((void**)&scene, sizeof(Hitable*)));
+	checkCudaErrors(cudaMallocManaged((void**)&objects, 4*sizeof(Hitable*)));
+	checkCudaErrors(cudaMallocManaged((void**)&scene, sizeof(Hitable*)));
+
 	init_scene<<<1, 1 >>>(scene, objects);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());

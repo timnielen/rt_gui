@@ -192,3 +192,4 @@ Hit Model::intersect(Ray& ray) {
     std::cout << count << std::endl;
     return result;
 }
+

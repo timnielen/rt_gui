@@ -6,6 +6,9 @@
 #include "Camera.h"
 #include "Material.h"
 #include <curand_kernel.h>
+#include "BVH.h"
+#include "sort.h"
+#include "Model.h"
 
 __device__
 float2 sampleSphericalMap(Vec3 direction)
@@ -15,16 +18,32 @@ float2 sampleSphericalMap(Vec3 direction)
 	return make_float2(u, v);
 }
 
+__device__ bool compare(int a, int b) {
+	return a <= b;
+}
+
 __global__ void init_scene(Hitable** scene, Hitable** objects) {
 	if (threadIdx.x != 0 || blockIdx.x != 0)
 		return;
-	objects[0] = new Sphere(Vec3(0, -100.5f, -1), 100, new Lambertian(Vec3(0.3f)));
-	objects[1] = new Sphere(Vec3(-1, 0, -1), 0.5f, new Metal(Vec3(1), 0.0f));
-	objects[2] = new Sphere(Vec3(1, 0, -1), 0.5f, new Metal(Vec3(1.0f, 0.2f, 0.1f), 0.5f));
-	objects[3] = new Sphere(Vec3(0, 0, -1), 0.5f, new Lambertian(Vec3(0.2f, 1.0f, 0.5f)));
+	objects[0] = new Sphere(Vec3(-1, 0, -1), 0.5f, new Metal(Vec3(1.0f), 0.1f));
+	objects[1] = new Sphere(Vec3(1, 0, -1), 0.5f, new Dielectric(1.5f));
+	objects[2] = new Sphere(Vec3(0, 2, -1), 0.5f, new Lambertian(Vec3(0.2f, 1.0f, 0.5f)));
+	//objects[3] = new Sphere(Vec3(1, 0, -1), -0.4f, new Dielectric(1.5f));
 
 
-	*scene = new HitableList(objects, 4);
+	Vert a, b, c;
+	a.Position = Vec3(-0.5f, 0.0f, 0.0f);
+	b.Position = Vec3(0.5f, 0.0f, 0.1f);
+	c.Position = Vec3(0.0f, 1.0f, -0.5f);
+	a.Normal = Vec3(0.0f, 0.0f, 1.0f);
+	b.Normal = Vec3(0.0f, 0.0f, 1.0f);
+	c.Normal = Vec3(0.0f, 0.0f, 1.0f);
+	objects[3] = new Triangle(a, b, c, new Metal(Vec3(1.0f), 0.0f));
+
+	curandState local_rand_state;
+	curand_init(6969, 0, 0, &local_rand_state);
+	HitableList* hlist = new HitableList(objects, 4);
+	*scene = new BVH_Node(hlist, &local_rand_state);
 }
 
 __global__ void free_scene(Hitable** scene, Hitable** objects, unsigned int sizeObjects) {

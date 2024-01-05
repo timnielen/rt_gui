@@ -172,6 +172,15 @@
     <ClInclude Include="Material.h">
       <Filter>includes</Filter>
     </ClInclude>
+    <ClInclude Include="AABB.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="BVH.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="sort.h">
+      <Filter>includes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="RT_Viewport.cu">

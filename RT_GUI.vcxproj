@@ -118,7 +118,9 @@
     <None Include="shader\vertex.glsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AABB.h" />
     <ClInclude Include="Application.h" />
+    <ClInclude Include="BVH.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="extern\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="extern\imgui\backends\imgui_impl_opengl3.h" />
@@ -139,6 +141,7 @@
     <ClInclude Include="raytracing.h" />
     <ClInclude Include="RT_Viewport.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="sort.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Vec3.h" />
     <ClInclude Include="Viewport.h" />

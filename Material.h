@@ -9,14 +9,10 @@ struct HitRecord;
 #include "Ray.h"
 #include "Vec3.h"
 
-#define RANDVEC3 Vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),curand_uniform(local_rand_state))
 
 __device__ inline Vec3 random_in_unit_sphere(curandState* local_rand_state) {
-	Vec3 p;
-	do {
-		p = 2.0f * RANDVEC3 - 1.0f;
-	} while (p.length_squared() >= 1.0f);
-	return p;
+	float2 rand = curand_normal2(local_rand_state);
+	return Vec3(rand.x, rand.y, curand_normal(local_rand_state));
 }
 
 __device__ inline Vec3 random_unit_vector(curandState* local_rand_state) {
@@ -31,8 +27,15 @@ __device__ inline Vec3 random_on_hemisphere(const Vec3& normal, curandState* loc
 		return -on_unit_sphere;
 }
 
-__device__ Vec3 reflect(const Vec3& v, const Vec3& n) {
+__device__ inline Vec3 reflect(const Vec3& v, const Vec3& n) {
 	return v - 2 * dot(v, n) * n;
+}
+
+__device__ inline Vec3 refract(const Vec3& uv, const Vec3& n, float etai_over_etat) {
+	float cos_theta = fminf(dot(-uv, n), 1.0f);
+	Vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+	Vec3 r_out_parallel = -sqrtf(fabsf(1.0f - r_out_perp.length_squared())) * n;
+	return r_out_perp + r_out_parallel;
 }
 
 class Material {
@@ -75,4 +78,43 @@ public:
 private:
 	Vec3 albedo;
 	float roughness;
+};
+
+class Dielectric : public Material {
+public:
+	__device__ Dielectric(float index_of_refraction) : ir(index_of_refraction) {}
+
+	__device__ bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state)
+		const override {
+		attenuation = Vec3(1.0f);
+		float refraction_ratio = rec.front_face ? (1.0f / ir) : ir;
+
+		Vec3 unit_direction = d_normalize(r_in.direction);
+
+		float cos_theta = fminf(dot(-unit_direction, rec.normal), 1.0f);
+		float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
+
+		Vec3 direction;
+		if (refraction_ratio * sin_theta > 1.0f || reflectance(cos_theta, refraction_ratio) > curand_uniform(local_rand_state)) {
+			// Must Reflect
+			direction = reflect(d_normalize(r_in.direction), rec.normal);
+		}
+		else {
+			// Can Refract
+			direction = refract(unit_direction, rec.normal, refraction_ratio);
+		}
+
+		scattered = Ray(rec.p, direction);
+		return true;
+	}
+
+private:
+	float ir; // Index of Refraction
+
+	__device__ static float reflectance(float cosine, float ref_idx) {
+		// Use Schlick's approximation for reflectance.
+		auto r0 = (1 - ref_idx) / (1 + ref_idx);
+		r0 = r0 * r0;
+		return r0 + (1 - r0) * powf((1 - cosine), 5);
+	}
 };

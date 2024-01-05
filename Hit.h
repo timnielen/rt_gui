@@ -1,6 +1,7 @@
 #pragma once
 #include "Vec3.h"
 #include "Ray.h"
+#include "AABB.h"
 
 class Material;
 
@@ -23,17 +24,26 @@ public:
 
 class Hitable {
 public:
-	__device__ __host__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const = 0;
+	AABB aabb;
+	__device__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const = 0;
 };
 
 class HitableList : public Hitable {
 public:
-	__device__ __host__ HitableList(Hitable** list, unsigned int length) : list(list), list_length(length) {}
-	__device__ __host__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override {
+	__device__ __host__ HitableList(Hitable** list, unsigned int length) : list(list), list_length(length) {
+		if (list_length == 0) return;
+		aabb = list[0]->aabb;
+		for (unsigned int i = 1; i < list_length; i++) {
+			aabb = AABB(aabb, list[i]->aabb);
+		}
+	}
+	__device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override {
+		if (!aabb.hit(r, tmin, tmax))
+			return false;
 		HitRecord temp_rec;
 		bool hit_anything = false;
 		float closest_so_far = tmax;
-		for (int i = 0; i < list_length; i++) {
+		for (unsigned int i = 0; i < list_length; i++) {
 			if (list[i]->hit(r, tmin, closest_so_far, temp_rec)) {
 				hit_anything = true;
 				closest_so_far = temp_rec.t;

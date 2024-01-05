@@ -24,7 +24,7 @@ void Mesh::calcAABB() {
     }
     std::cout << "max: " << aabb.max.x << " " << aabb.max.y << " " << aabb.max.z << std::endl;
     std::cout << "min: " << aabb.min.x << " " << aabb.min.y << " " << aabb.min.z << std::endl;
-    std::cout << sizeof(AABB) << std::endl;
+    std::cout << sizeof(BBox) << std::endl;
 
 
     glGenVertexArrays(1, &aabbVAO);
@@ -34,7 +34,7 @@ void Mesh::calcAABB() {
     glBindVertexArray(aabbVAO);
     glBindBuffer(GL_ARRAY_BUFFER, aabbVBO);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(AABB), &aabb, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(BBox), &aabb, GL_STATIC_DRAW);
 
     // vertex positions
     glEnableVertexAttribArray(0);
@@ -111,7 +111,7 @@ void Mesh::renderAABB(Shader& shader) {
 }
 
 
-Hit AABB::intersect(Ray& r, glm::mat4 transform) {
+Hit BBox::intersect(Ray& r, glm::mat4 transform) {
     Hit h;
     glm::vec4 min = transform * glm::vec4(this->min.x, this->min.y, this->min.z, 1.0f);
     glm::vec4 max = transform * glm::vec4(this->max.x, this->max.y, this->max.z, 1.0f);
