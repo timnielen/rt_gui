@@ -7,8 +7,7 @@
 #include "Material.h"
 #include <curand_kernel.h>
 #include "BVH.h"
-#include "sort.h"
-#include "Model.h"
+#include "d_Model.h"
 
 __device__
 float2 sampleSphericalMap(Vec3 direction)
@@ -22,28 +21,23 @@ __device__ bool compare(int a, int b) {
 	return a <= b;
 }
 
-__global__ void init_scene(Hitable** scene, Hitable** objects) {
+__global__ void init_scene(Hitable** scene, Hitable** hlist) {
 	if (threadIdx.x != 0 || blockIdx.x != 0)
 		return;
-	objects[0] = new Sphere(Vec3(-1, 0, -1), 0.5f, new Metal(Vec3(1.0f), 0.1f));
-	objects[1] = new Sphere(Vec3(1, 0, -1), 0.5f, new Dielectric(1.5f));
-	objects[2] = new Sphere(Vec3(0, 2, -1), 0.5f, new Lambertian(Vec3(0.2f, 1.0f, 0.5f)));
-	//objects[3] = new Sphere(Vec3(1, 0, -1), -0.4f, new Dielectric(1.5f));
 
-
-	Vert a, b, c;
-	a.Position = Vec3(-0.5f, 0.0f, 0.0f);
-	b.Position = Vec3(0.5f, 0.0f, 0.1f);
-	c.Position = Vec3(0.0f, 1.0f, -0.5f);
-	a.Normal = Vec3(0.0f, 0.0f, 1.0f);
-	b.Normal = Vec3(0.0f, 0.0f, 1.0f);
-	c.Normal = Vec3(0.0f, 0.0f, 1.0f);
-	objects[3] = new Triangle(a, b, c, new Metal(Vec3(1.0f), 0.0f));
+	/*d_Vertex *verts = new d_Vertex[3];
+	verts[0].Position = Vec3(-0.5f, 0.0f, 0.0f);
+	verts[1].Position = Vec3(0.5f, 0.0f, 0.1f);
+	verts[2].Position = Vec3(0.0f, 1.0f, -0.5f);
+	verts[0].Normal = Vec3(0.0f, 0.0f, 1.0f);
+	verts[1].Normal = Vec3(0.0f, 0.0f, 1.0f);
+	verts[2].Normal = Vec3(0.0f, 0.0f, 1.0f);
+	objects[3] = new Triangle(0, 1, 2, verts, new Metal(Vec3(1.0f), 0.0f));*/
 
 	curandState local_rand_state;
 	curand_init(6969, 0, 0, &local_rand_state);
-	HitableList* hlist = new HitableList(objects, 4);
-	*scene = new BVH_Node(hlist, &local_rand_state);
+	//HitableList* hlist = new HitableList(objects, objectCount);
+	*scene = *hlist; // new BVH_Node(objects, 0, 10, &local_rand_state);
 }
 
 __global__ void free_scene(Hitable** scene, Hitable** objects, unsigned int sizeObjects) {
@@ -92,14 +86,12 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
 	if ((i >= max_x) || (j >= max_y)) return;
 	int pixel_index = j * max_x + i;
 	//Each thread gets same seed, a different sequence number, no offset
-	curand_init(6969, pixel_index, 0, &rand_state[pixel_index]);
+	curand_init(6969 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
 __global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, Camera* cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
-	float u = float(i / float(max_x));
-	float v = float(j / float(max_y));
 	if ((i >= max_x) || (j >= max_y)) return;
 
 	int pixel_index = j * max_x + i;

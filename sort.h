@@ -13,57 +13,61 @@ namespace sort {
 
 
     template<class T, typename OP>
-    __device__ int partition(T arr[], int start, int end, OP compare)
+    __device__ int partition(T arr[], int l, int h, OP compare)
     {
+        T x = arr[h];
+        int i = (l - 1);
 
-        T pivot = arr[start];
-
-        int count = 0;
-        for (int i = start + 1; i <= end; i++) {
-            if (compare(arr[i], pivot))
-                count++;
-        }
-
-        // Giving pivot element its correct position
-        int pivotIndex = start + count;
-        swap(arr[pivotIndex], arr[start]);
-
-        // Sorting left and right parts of the pivot element
-        int i = start, j = end;
-
-        while (i < pivotIndex && j > pivotIndex) {
-
-            while (compare(arr[i], pivot)) {
+        for (int j = l; j <= h - 1; j++) {
+            if (compare(arr[j], x)) {
                 i++;
-            }
-
-            while (!compare(arr[j], pivot)) {
-                j--;
-            }
-
-            if (i < pivotIndex && j > pivotIndex) {
-                swap(arr[i++], arr[j--]);
+                swap(arr[i], arr[j]);
             }
         }
-
-        return pivotIndex;
+        swap(arr[i + 1], arr[h]);
+        return (i + 1);
     }
 
+    /* A[] --> Array to be sorted,
+    l --> Starting index,
+    h --> Ending index */
     template<class T, typename OP>
-    __device__ void quickSort(T arr[], int start, int end, OP compare)
+    __device__ void quickSort(T arr[], int l, int h, OP compare)
     {
+        // Create an auxiliary stack 
+        int *stack = new int[h - l + 1];
 
-        // base case
-        if (start >= end)
-            return;
+        // initialize top of stack 
+        int top = -1;
 
-        // partitioning the array
-        int p = partition(arr, start, end, compare);
+        // push initial values of l and h to stack 
+        stack[++top] = l;
+        stack[++top] = h;
 
-        // sorting the left part
-        quickSort(arr, start, p - 1, compare);
+        // Keep popping from stack while is not empty 
+        while (top >= 0) {
+            // Pop h and l 
+            h = stack[top--];
+            l = stack[top--];
 
-        // sorting the right part
-        quickSort(arr, p + 1, end, compare);
+            // Set pivot element at its correct position 
+            // in sorted array 
+            int p = partition(arr, l, h, compare);
+
+            // If there are elements on left side of pivot, 
+            // then push left side to stack 
+            if (p - 1 > l) {
+                stack[++top] = l;
+                stack[++top] = p - 1;
+            }
+
+            // If there are elements on right side of pivot, 
+            // then push right side to stack 
+            if (p + 1 < h) {
+                stack[++top] = p + 1;
+                stack[++top] = h;
+            }
+        }
+        delete[] stack;
     }
 }

@@ -72,7 +72,12 @@ public:
     __host__ __device__ Vec3& operator/=(float t) {
         return *this *= 1 / t;
     }
-
+    __host__ __device__ Vec3& operator/=(Vec3 v) {
+        x /= v.x;
+        y /= v.y;
+        z /= v.z;
+        return *this;
+    }
     __host__ __device__ float length() const {
         return sqrt(length_squared());
     }

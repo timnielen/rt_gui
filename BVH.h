@@ -7,6 +7,7 @@
 #include "sort.h"
 
 
+
 class BVH_Node : public Hitable {
 	Hitable* left;
 	Hitable* right;
@@ -17,7 +18,6 @@ public:
         auto comparator = (axis == 1) ? box_x_compare
             : (axis == 2) ? box_y_compare
             : box_z_compare;
-        //auto comparator = box_x_compare;
 
         size_t object_span = end - start;
 
@@ -40,6 +40,7 @@ public:
             auto mid = start + object_span / 2;
             left = new BVH_Node(objects, start, mid, local_rand_state);
             right = new BVH_Node(objects, mid, end, local_rand_state);
+
         }
         aabb = AABB(left->aabb, right->aabb);
     }
@@ -53,6 +54,9 @@ public:
 		return hit_left || hit_right;
 
 	}
+    __host__ Hitable* toGPU() override {
+        return this;
+    }
 
 private:
     __device__ static bool box_compare(const Hitable* a, const Hitable* b, int axis_index) {

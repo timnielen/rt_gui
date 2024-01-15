@@ -5,9 +5,8 @@
 #include "Sphere.h"
 #include "File.h"
 #include "raytracing.h"
-#include "Mesh.h"
+#include "cuda_helper.h"
 
-#define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
 	if (result) {
 		std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
@@ -25,6 +24,7 @@ void add(int n, float* x, float* y)
 	if (i >= n) return;
 	y[i] = x[i] + y[i];
 }
+
 
 RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	unsigned int dCount = 0;
@@ -49,12 +49,17 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	*camera = Camera();
 	camera->setPosition(glm::vec3(0, 0, 3));
 
-	checkCudaErrors(cudaMallocManaged((void**)&objects, 4*sizeof(Hitable*)));
-	checkCudaErrors(cudaMallocManaged((void**)&scene, sizeof(Hitable*)));
+	//checkCudaErrors(cudaMallocManaged((void**)&objects, 4*sizeof(Hitable*)));
+	//checkCudaErrors(cudaMallocManaged((void**)&scene, sizeof(Hitable*)));
+	//d_Model model = d_Model(Model("assets/Survival_BackPack_2/backpack.obj"));
+	d_Model model = d_Model(Model("assets/cube.obj"));
 
-	init_scene<<<1, 1 >>>(scene, objects);
+
+
+	scene = model.hitable;
+	/*init_scene<<<1, 1 >>>(scene, model.hitables);
 	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaDeviceSynchronize());*/
 
 	hdri.init(load_texture("./assets/hdri/rural_crossroads_4k.hdr"));
 

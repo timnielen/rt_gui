@@ -211,3 +211,4 @@ Hit Mesh::intersect(Ray& r, glm::mat4 transform) {
     }
     return h;
 }
+

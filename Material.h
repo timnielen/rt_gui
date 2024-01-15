@@ -47,7 +47,7 @@ public:
 class Lambertian : public Material {
     Vec3 albedo;
 public:
-    __device__ Lambertian(const Vec3& albedo) : albedo(albedo) {}
+    __device__ __host__ Lambertian(const Vec3& albedo) : albedo(albedo) {}
 
 	__device__ bool scatter(
 		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const override {

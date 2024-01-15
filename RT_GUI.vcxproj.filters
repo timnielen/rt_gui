@@ -67,9 +67,6 @@
     <ClCompile Include="Mesh.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="Model.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
@@ -181,9 +178,24 @@
     <ClInclude Include="sort.h">
       <Filter>includes</Filter>
     </ClInclude>
+    <ClInclude Include="d_Model.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_helper.h">
+      <Filter>includes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="RT_Viewport.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Model.cpp">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="d_Model.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Hit.cu">
       <Filter>sources</Filter>
     </CudaCompile>
   </ItemGroup>

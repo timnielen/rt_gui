@@ -13,8 +13,8 @@ void printMat4(glm::mat4 m) {
 }
 
 void Model::loadModel(std::string path) {
-	Assimp::Importer import;
-	const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    Assimp::Importer import;
+    const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -22,7 +22,7 @@ void Model::loadModel(std::string path) {
         return;
     }
     directory = path.substr(0, path.find_last_of('/'));
-    
+
     processNode(scene->mRootNode, scene, glm::mat4(1));
 }
 
@@ -154,7 +154,7 @@ void Model::render(Shader& shader, bool points)
     transform = glm::scale(transform, scale);
     for (unsigned int i = 0; i < meshes.size(); i++)
     {
-        shader.setMat4("model", transform*transformations[i]);
+        shader.setMat4("model", transform * transformations[i]);
         meshes[i].render(shader, points);
     }
 }
@@ -193,3 +193,10 @@ Hit Model::intersect(Ray& ray) {
     return result;
 }
 
+glm::mat4 Model::getModelTransformation() const {
+    glm::mat4 transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, position);
+    transform = glm::rotate(transform, angle, rotationAxis);
+    transform = glm::scale(transform, scale);
+    return transform;
+}

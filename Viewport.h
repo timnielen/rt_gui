@@ -11,7 +11,7 @@ struct ViewportSettings {
 	bool wireframe = false;
 	bool drawNormals = false;
 	bool drawAABBs = false;
-	float viewNormalsLength = 0.1;
+	float viewNormalsLength = 0.1f;
 };
 
 class Viewport
