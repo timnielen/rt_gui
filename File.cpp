@@ -27,7 +27,7 @@ unsigned int load_texture(const char* path, bool flipVertical) {
 	}
 	else
 	{
-		std::cout << "Failed to load texture" << std::endl;
+		std::cout << "Failed to load texture: " << path << std::endl;
 	}
 
 	stbi_image_free(data);

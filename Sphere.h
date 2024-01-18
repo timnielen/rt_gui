@@ -39,8 +39,4 @@ public:
         rec.mat = mat;
         return true;
     }
-
-    __host__ Hitable* toGPU() override {
-        return this;
-    }
 };

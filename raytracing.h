@@ -56,6 +56,7 @@ __device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, i
 	for (int i = 0; i < max_steps; i++) {
 		HitRecord rec;
 		if (obj->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
+			//return Vec3(1.0f);
 			Ray scatter;
 			Vec3 attenuation;
 			if (!rec.mat->scatter(cur_ray, rec, attenuation, scatter, local_rand_state))

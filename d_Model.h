@@ -30,12 +30,6 @@ public:
         aabb = AABB(min, max);
     }
     __device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override;
-    __host__ Hitable* toGPU() override {
-        Hitable* gpu;
-        cudaMallocManaged((void**)&gpu, sizeof(Triangle));
-        cudaMemcpy(gpu, this, sizeof(Triangle), cudaMemcpyHostToDevice);
-        return gpu;
-    }
 };
 
 

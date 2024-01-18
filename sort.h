@@ -70,4 +70,7 @@ namespace sort {
         }
         delete[] stack;
     }
+
+
+    __device__ void radixSort(unsigned int indices[], unsigned int keys[], unsigned int arrLength, unsigned int keyLength);
 }

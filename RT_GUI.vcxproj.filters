@@ -195,7 +195,10 @@
     <CudaCompile Include="d_Model.cu">
       <Filter>sources</Filter>
     </CudaCompile>
-    <CudaCompile Include="Hit.cu">
+    <CudaCompile Include="sort.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="BVH.cu">
       <Filter>sources</Filter>
     </CudaCompile>
   </ItemGroup>

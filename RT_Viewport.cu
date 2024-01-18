@@ -41,8 +41,12 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	cudaGetDeviceProperties(&prop, cudaDevice);
 	std::cout << "Cuda device:" << std::endl;
 	std::cout << cudaDevice << "\t" << prop.name << std::endl;
-	//checkCudaErrors(cudaSetDevice(devices[0]));
 
+	size_t currStackSize;
+	cudaDeviceGetLimit(&currStackSize, cudaLimitStackSize);
+	std::cout << "currStackSize:" << currStackSize << std::endl;
+
+	cudaDeviceSetLimit(cudaLimitStackSize, 1024 * 8);
 
 	glGenTextures(1, &texture);
 	checkCudaErrors(cudaMallocManaged((void**)&camera, sizeof(Camera)));
@@ -52,7 +56,7 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	//checkCudaErrors(cudaMallocManaged((void**)&objects, 4*sizeof(Hitable*)));
 	//checkCudaErrors(cudaMallocManaged((void**)&scene, sizeof(Hitable*)));
 	//d_Model model = d_Model(Model("assets/Survival_BackPack_2/backpack.obj"));
-	d_Model model = d_Model(Model("assets/cube.obj"));
+	d_Model model = d_Model(Model("assets/monkey.obj"));
 
 
 
@@ -61,7 +65,7 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());*/
 
-	hdri.init(load_texture("./assets/hdri/rural_crossroads_4k.hdr"));
+	hdri.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
 
 }
 

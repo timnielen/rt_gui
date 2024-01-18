@@ -71,7 +71,7 @@ __global__ void loadTriangles(int* indices, int countIndices, Vertex* vertices, 
     for (int i = 0; i < countVertices; i++) {
         d_vertices[i] = d_Vertex(vertices[i]);
     }
-    Material* mat = new Metal(Vec3(1,1,1), 0.0f);
+    Material* mat = new Lambertian(Vec3(1,0.1f,0.5f));
     const int triCount = countIndices / 3;
     Hitable** triangles = new Hitable*[triCount];
     //Triangle* triangles = new Triangle[triCount];
@@ -82,15 +82,24 @@ __global__ void loadTriangles(int* indices, int countIndices, Vertex* vertices, 
     }
     curandState local_rand_state;
     curand_init(7698, 0, 0, &local_rand_state);
-    printf("%i, %i, %i\n", triCount, countIndices, countVertices);
     //printTriangles((Triangle**)triangles, triCount);
-    *hlist = new HitableList(triangles, triCount); //new Sphere(Vec3(0,0,-1), 0.5f, mat); //  new BVH_Node(triangles, 0, triCount, &local_rand_state);
+    BVH * bvh = new BVH(HitableList(triangles, triCount));
+    int blockSize = 256;
+    int numBlocks = (triCount + blockSize - 1) / blockSize;
+    constructBVH << <numBlocks, blockSize >> > (bvh);
+    *hlist = bvh; //new Sphere(Vec3(0,0,-1), 0.5f, mat); // 
 }
 
 __global__ void combineMeshes(Hitable** hlist, int size, Hitable** output) {
     curandState local_rand_state;
     curand_init(1348, 0, 0, &local_rand_state);
-    *output = new BVH_Node(hlist, 0, size, &local_rand_state);
+    /*BVH* bvh = new BVH(HitableList(hlist, size));
+    int blockSize = 256;
+    int numBlocks = (size + blockSize - 1) / blockSize;
+    constructBVH << <numBlocks, blockSize >> > (bvh);*/
+    BVH* bvh = (BVH*)*hlist;
+    bvh->print();
+    *output = *hlist; // new BVH_Node(hlist, 0, size, &local_rand_state);
 }
 
 void printVertex(d_Vertex v) {
@@ -132,7 +141,7 @@ d_Model::d_Model(const Model &m) {
 
         cudaMalloc((void**)&meshVertices[i], countVerts * sizeof(d_Vertex));
 
-        std::cout << i << std::endl;
+        std::cout << "mesh: " << i << std::endl;
         loadTriangles <<<1, 1 >>> (indices, countIndices, vertices, meshVertices[i], countVerts, hlist+i);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
