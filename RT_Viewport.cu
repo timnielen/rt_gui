@@ -51,7 +51,6 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	glGenTextures(1, &texture);
 	checkCudaErrors(cudaMallocManaged((void**)&camera, sizeof(Camera)));
 	*camera = Camera();
-	camera->setPosition(glm::vec3(0, 0, 3));
 
 	//checkCudaErrors(cudaMallocManaged((void**)&objects, 4*sizeof(Hitable*)));
 	//checkCudaErrors(cudaMallocManaged((void**)&scene, sizeof(Hitable*)));

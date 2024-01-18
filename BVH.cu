@@ -32,7 +32,7 @@ __device__ int BVH::prefixLength(unsigned int indexA, unsigned int indexB) {
 	unsigned int keyA = mortonCodes[sortedIndices[indexA]];
 	unsigned int keyB = mortonCodes[sortedIndices[indexB]];
 	if (keyA == keyB)
-		return MORTON_LENGTH + __clz(indexA ^ indexB);
+		return __clz(keyA ^ keyB) + __clz(indexA ^ indexB);
 	return __clz(keyA ^ keyB);
 }
 
@@ -49,9 +49,9 @@ __device__ void BVH::genMortonCodes() {
 		mortonCodes[i] = morton3D(centroid);
 	}
 	sort::radixSort(sortedIndices, mortonCodes, countLeaves, MORTON_LENGTH);
-	for (int i = 0; i < countLeaves; i++) {
-		//printf("%d\n", sortedIndices[i]);
-	}
+	//for (int i = 0; i < countLeaves; i++) {
+	//	//printf("%08x\n", mortonCodes[sortedIndices[i]]);
+	//}
 }
 
 
@@ -59,9 +59,10 @@ __device__ void BVH::genMortonCodes() {
 __global__ 
 void constructBVH(BVH* bvh) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
-	if (index > bvh->countLeaves - 2) return;
+	if (index > bvh->countLeaves - 2 || bvh->nodes == nullptr) return;
+
 	//Determine direction of the range (+1 or -1)
-	int direction = (bvh->prefixLength(index, index + 1) - bvh->prefixLength(index, index - 1) < 0) ? -1 : 1;
+	int direction = ((bvh->prefixLength(index, index + 1) - bvh->prefixLength(index, index - 1)) < 0) ? -1 : 1;
 
 	//Compute upper bound for the length of the range
 	int deltaMin = bvh->prefixLength(index, index - direction);
@@ -84,24 +85,19 @@ void constructBVH(BVH* bvh) {
 	int deltaNode = bvh->prefixLength(index, indexEnd);
 	int split = 0;
 
-	int denom = 2;
-	int t = (len + 1) / denom;
-	while (t >= 1) {
+	for (int i = 2; ((len + i - 1) / i) >= 1; i *= 2) {
+		int t = ((len + i - 1) / i);
 		if (bvh->prefixLength(index, index + (split + t) * direction) > deltaNode)
 			split += t;
-
-		denom *= 2;
-		t = (len + 1) / denom;
 	}
-	int splitPos = index + split * direction + min(direction, 0);
+
+	int splitPos = index + (split) * direction + min(direction, 0);
 
 	bool leftLeaf = min(index, indexEnd) == splitPos;
 	bool rightLeaf = max(index, indexEnd) == splitPos + 1;
 	Hitable* left = (leftLeaf) ? bvh->leaves[bvh->sortedIndices[splitPos]] : &(bvh->nodes[splitPos]);
 	Hitable* right = (rightLeaf) ? bvh->leaves[bvh->sortedIndices[splitPos+1]] : &(bvh->nodes[splitPos+1]);
-	/*printf("start: %d, end: %d, split %d\n", index, indexEnd, split);
-	printf("left %p: leaf %i\n", left, leftLeaf);
-	printf("right %p: leaf %i\n", right, rightLeaf);*/
+
 	bvh->nodes[index] = BVH_Node(left, right, leftLeaf, rightLeaf);
 	AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
 	for (int i = 1; i <= len; i++)
@@ -115,6 +111,8 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 	// and push NULL to indicate that there are no postponed nodes.
 	if (!aabb.hit(r, tmin, tmax))
 		return false;
+	if (nodes == nullptr)
+		return leaves[0]->hit(r, tmin, tmax, rec);
 	BVH_Node* stack[128];
 	BVH_Node** stackPtr = stack;
 	*stackPtr++ = NULL; // push

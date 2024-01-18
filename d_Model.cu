@@ -4,6 +4,9 @@
 #include <curand_kernel.h>
 #include <cuda_gl_interop.h>
 #include "Sphere.h"
+#include <chrono>
+
+#define BLOCK_SIZE 256
 
 __device__ bool Triangle::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
     /*if (!aabb.hit(r, tmin, tmax))
@@ -64,42 +67,38 @@ __device__ void printTriangles(Triangle** triangles, int size) {
     }
     printf("\n");
 }
-
-__global__ void loadTriangles(int* indices, int countIndices, Vertex* vertices, d_Vertex* d_vertices, int countVertices, Hitable** hlist) {
-    if (threadIdx.x != 0 || blockIdx.x != 0)
-        return;
-    for (int i = 0; i < countVertices; i++) {
-        d_vertices[i] = d_Vertex(vertices[i]);
-    }
-    Material* mat = new Lambertian(Vec3(1,0.1f,0.5f));
-    const int triCount = countIndices / 3;
-    Hitable** triangles = new Hitable*[triCount];
-    //Triangle* triangles = new Triangle[triCount];
-    AABB aabb;
-    for (int i = 0; i < triCount; i++) {
-        //hitables[i] = triangles + i;
-        triangles[i] = new Triangle(indices[3 * i], indices[3 * i + 1], indices[3 * i + 2], d_vertices, mat);
-    }
-    curandState local_rand_state;
-    curand_init(7698, 0, 0, &local_rand_state);
-    //printTriangles((Triangle**)triangles, triCount);
-    BVH * bvh = new BVH(HitableList(triangles, triCount));
-    int blockSize = 256;
-    int numBlocks = (triCount + blockSize - 1) / blockSize;
-    constructBVH << <numBlocks, blockSize >> > (bvh);
-    *hlist = bvh; //new Sphere(Vec3(0,0,-1), 0.5f, mat); // 
+__global__ void loadMaterial(Material** mat) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index != 0) return;
+    *mat = new Lambertian(Vec3(1, 0.1f, 0.5f));
 }
 
-__global__ void combineMeshes(Hitable** hlist, int size, Hitable** output) {
-    curandState local_rand_state;
-    curand_init(1348, 0, 0, &local_rand_state);
-    /*BVH* bvh = new BVH(HitableList(hlist, size));
-    int blockSize = 256;
-    int numBlocks = (size + blockSize - 1) / blockSize;
-    constructBVH << <numBlocks, blockSize >> > (bvh);*/
-    BVH* bvh = (BVH*)*hlist;
-    bvh->print();
-    *output = *hlist; // new BVH_Node(hlist, 0, size, &local_rand_state);
+__global__ void copyVertices(Vertex* vertices, d_Vertex* d_vertices, int countVertices) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= countVertices) return;
+    d_vertices[index] = d_Vertex(vertices[index]);
+}
+
+__global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, d_Vertex* d_vertices, Material** mat) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= triCount) return;
+    if(index == 0)
+    {
+        printf("test\n");
+        printf("%p\n", indices);
+    }
+    hlist[index] = new Triangle(indices[3 * index], indices[3 * index + 1], indices[3 * index + 2], d_vertices, *mat);
+}
+
+__global__ void combineHitables(Hitable** output, Hitable** hlist, int count) {
+    if (blockIdx.x != 0 || threadIdx.x != 0) return;
+    if (count == 1) {
+        *output = *hlist;
+        return;
+    }
+    BVH* bvh = new BVH(HitableList(hlist, count));
+    constructBVH << <(count + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
+    *output = bvh;
 }
 
 void printVertex(d_Vertex v) {
@@ -122,29 +121,68 @@ d_Model::d_Model(const Model &m) {
     cudaGraphicsResource_t cudaEBO;
     cudaGraphicsResource_t cudaVBO;
 
-    for (int i = 0; i < meshCount; i++) {
-        Mesh mesh = meshes[i];
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
 
+    for (int i = 0; i < meshCount; i++) {
+        std::cout << "mesh: " << i << std::endl;
+        Mesh mesh = meshes[i];
+        
         cudaGraphicsGLRegisterBuffer(&cudaVBO, mesh.VBO, cudaGraphicsRegisterFlagsReadOnly);
         cudaGraphicsGLRegisterBuffer(&cudaEBO, mesh.EBO, cudaGraphicsRegisterFlagsReadOnly);
-
+        
         int* indices;
         cudaGraphicsMapResources(1, &cudaEBO, 0);
+
         size_t num_bytes;
         cudaGraphicsResourceGetMappedPointer((void**)&indices, &num_bytes, cudaEBO);
-        int countIndices = num_bytes / sizeof(int);
+        int countTriangles = (num_bytes / sizeof(int)) / 3;
 
         Vertex* vertices;
         cudaGraphicsMapResources(1, &cudaVBO, 0);
+
         cudaGraphicsResourceGetMappedPointer((void**)&vertices, &num_bytes, cudaVBO);
         int countVerts = num_bytes / sizeof(Vertex);
 
         cudaMalloc((void**)&meshVertices[i], countVerts * sizeof(d_Vertex));
 
-        std::cout << "mesh: " << i << std::endl;
-        loadTriangles <<<1, 1 >>> (indices, countIndices, vertices, meshVertices[i], countVerts, hlist+i);
+        Hitable** triangles;
+        cudaMalloc((void**)&triangles, countTriangles * sizeof(Hitable*));
+
+        auto t1 = high_resolution_clock::now();
+        {
+            copyVertices << <(countVerts + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (vertices, meshVertices[i], countVerts);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+        }
+        auto t2 = high_resolution_clock::now();
+        std::cout << "copying verts took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
+
+        Material** mat;
+        cudaMalloc((void**)&mat, sizeof(Material*));
+        loadMaterial << <1, 1 >> > (mat);
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
+
+        t1 = high_resolution_clock::now();
+        {
+            loadTriangles << <(countTriangles + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (triangles, indices, countTriangles, meshVertices[i], mat);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << "loading triangles took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
+
+        t1 = high_resolution_clock::now();
+        {
+            combineHitables << <1, 1 >> > (hlist+i, triangles, countTriangles);
+            checkCudaErrors(cudaGetLastError());
+            checkCudaErrors(cudaDeviceSynchronize());
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << "combining triangles took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
 
         cudaGraphicsUnmapResources(1, &cudaEBO, 0);
         cudaGraphicsUnmapResources(1, &cudaVBO, 0);
@@ -153,7 +191,7 @@ d_Model::d_Model(const Model &m) {
     }
 
     cudaMalloc((void**)&hitable, sizeof(Hitable*));
-    combineMeshes << <1, 1 >> > (hlist, meshCount, this->hitable);
+    combineHitables << <1, 1 >> > (this->hitable, hlist, meshCount);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 }

@@ -7,7 +7,7 @@
 #include <GLFW/glfw3.h>
 
 App::App() : shader("shader/vertex.glsl", "shader/fragment.glsl") {
-	//viewport = new Viewport(shader);
+	viewport = new Viewport(shader);
 	rt_viewport = new RT_Viewport();
 	glfwSwapInterval(0);
 }
@@ -21,7 +21,7 @@ void App::renderUI(ImGuiIO& io) {
 	ImGui::Begin("Settings");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 	
-	/*ImGui::Checkbox("Wireframe", &(viewport->settings.wireframe));
+	ImGui::Checkbox("Wireframe", &(viewport->settings.wireframe));
 	if (ImGui::Button("Reload shader")) {
 		shader.destroy();
 		shader = Shader("shader/vertex.glsl", "shader/fragment.glsl");
@@ -36,20 +36,20 @@ void App::renderUI(ImGuiIO& io) {
 	ImGui::Checkbox("Draw AABBs", &(viewport->settings.drawAABBs));
 	ImGui::Checkbox("Draw Normals", &(viewport->settings.drawNormals));
 	ImGui::InputFloat("Normals Length", &(viewport->settings.viewNormalsLength));
-	ImGui::InputFloat3("DirLight", glm::value_ptr(viewport->dirLight));*/
+	ImGui::InputFloat3("DirLight", glm::value_ptr(viewport->dirLight));
 
 	ImGui::InputInt("Samples", &(rt_viewport->samples), 1);
 	ImGui::InputInt("Max Steps", &(rt_viewport->max_steps), 1);
 
 	ImGui::End();
 
-	//viewport->render(io.DeltaTime);
+	viewport->render(io.DeltaTime);
 	rt_viewport->render(io.DeltaTime);
 }
 
 App::~App()
 {
 	delete rt_viewport;
-	//delete viewport;
+	delete viewport;
 	shader.destroy();
 }

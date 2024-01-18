@@ -21,9 +21,7 @@ Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), camera(), gr
 	normalsShader.setFragment("shader/in_color_fragment.glsl");
 	normalsShader.link();
 
-	model = new Model("assets/Survival_BackPack_2/backpack.obj");
-	camera.setPosition(glm::vec3(0));
-	camera.pitch = 0.0f;
+	model = new Model("assets/monkey.obj");
 	camera.updateView();
 	glEnable(GL_DEPTH_TEST); 
 	glEnable(GL_MULTISAMPLE);
