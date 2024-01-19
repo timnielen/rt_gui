@@ -11,6 +11,7 @@ class Model
 {
 public:
     bool flipTextures;
+    Model() {}
     Model(const char* path, bool flipTextures = true) : flipTextures(flipTextures)
     {
         loadModel(path);

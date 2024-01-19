@@ -49,13 +49,7 @@
     <ClCompile Include="extern\imgui\backends\imgui_impl_opengl3.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="Viewport.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="Shader.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="File.cpp">
@@ -65,6 +59,9 @@
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="Mesh.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cuda_helper.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -97,6 +94,7 @@
     <None Include="shader\normals_geometry.glsl">
       <Filter>shader</Filter>
     </None>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="extern\imgui\imconfig.h">
@@ -135,9 +133,6 @@
     <ClInclude Include="Shader.h">
       <Filter>includes</Filter>
     </ClInclude>
-    <ClInclude Include="Viewport.h">
-      <Filter>includes</Filter>
-    </ClInclude>
     <ClInclude Include="Application.h">
       <Filter>includes</Filter>
     </ClInclude>
@@ -148,9 +143,6 @@
       <Filter>includes</Filter>
     </ClInclude>
     <ClInclude Include="Helper.h" />
-    <ClInclude Include="RT_Viewport.h">
-      <Filter>includes</Filter>
-    </ClInclude>
     <ClInclude Include="Vec3.h">
       <Filter>includes</Filter>
     </ClInclude>
@@ -184,11 +176,14 @@
     <ClInclude Include="cuda_helper.h">
       <Filter>includes</Filter>
     </ClInclude>
+    <ClInclude Include="DynamicViewport.h">
+      <Filter>includes</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalTypes.h">
+      <Filter>includes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="RT_Viewport.cu">
-      <Filter>sources</Filter>
-    </CudaCompile>
     <CudaCompile Include="Model.cpp">
       <Filter>sources</Filter>
     </CudaCompile>
@@ -199,6 +194,12 @@
       <Filter>sources</Filter>
     </CudaCompile>
     <CudaCompile Include="BVH.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="DynamicViewport.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Camera.cu">
       <Filter>sources</Filter>
     </CudaCompile>
   </ItemGroup>

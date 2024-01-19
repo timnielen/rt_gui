@@ -39,19 +39,6 @@ Viewport::Viewport(const Shader &sh) : size({ -1,-1 }), shader(sh), camera(), gr
 	axisShader.link();
 	axisShader.use();
 	axisShader.setFloat("size", 0.2f);
-
-	glm::mat3 m = glm::mat3(1.0f);
-	std::cout << m[0][0] << " " << m[0][1] << " " << m[0][2] << std::endl;
-	std::cout << m[1][0] << " " << m[1][1] << " " << m[1][2] << std::endl;
-	std::cout << m[2][0] << " " << m[2][1] << " " << m[2][2] << std::endl;
-	float d = glm::determinant(m);
-	m = glm::inverse(m);
-	if (d == 0)
-		std::cout << "error" << std::endl;
-	else std::cout << "success" << std::endl;
-	std::cout << m[0][0] << " " << m[0][1] << " " << m[0][2] << std::endl;
-	std::cout << m[1][0] << " " << m[1][1] << " " << m[1][2] << std::endl;
-	std::cout << m[2][0] << " " << m[2][1] << " " << m[2][2] << std::endl;
 }
 
 void Viewport::setShader(const Shader& sh) {

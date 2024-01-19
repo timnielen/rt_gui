@@ -95,7 +95,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
-    <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="cuda_helper.cpp" />
     <ClCompile Include="extern\gl3w\src\gl3w.c" />
     <ClCompile Include="extern\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="extern\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -109,9 +109,9 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Shader.cpp" />
-    <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram.cd" />
     <None Include="extern\imgui\examples\example_glfw_opengl3\imgui.ini" />
     <None Include="shader\pbr_fragment.glsl" />
     <None Include="shader\axis_geometry.glsl" />
@@ -129,6 +129,7 @@
     <ClInclude Include="BVH.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="cuda_helper.h" />
+    <ClInclude Include="DynamicViewport.h" />
     <ClInclude Include="extern\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="extern\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="extern\imgui\imconfig.h" />
@@ -138,6 +139,7 @@
     <ClInclude Include="extern\imgui\imstb_textedit.h" />
     <ClInclude Include="extern\imgui\imstb_truetype.h" />
     <ClInclude Include="File.h" />
+    <ClInclude Include="GlobalTypes.h" />
     <ClInclude Include="Grid.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Helper.h" />
@@ -146,18 +148,17 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="raytracing.h" />
-    <ClInclude Include="RT_Viewport.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="sort.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="d_Model.h" />
     <ClInclude Include="Vec3.h" />
-    <ClInclude Include="Viewport.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="BVH.cu" />
+    <CudaCompile Include="Camera.cu" />
+    <CudaCompile Include="DynamicViewport.cu" />
     <CudaCompile Include="Model.cpp" />
-    <CudaCompile Include="RT_Viewport.cu" />
     <CudaCompile Include="d_Model.cu" />
     <CudaCompile Include="sort.cu" />
   </ItemGroup>

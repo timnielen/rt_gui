@@ -50,7 +50,7 @@ __global__ void free_scene(Hitable** scene, Hitable** objects, unsigned int size
 	delete* scene;
 }
 
-__device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, int max_steps, cudaTextureObject_t hdri) {
+__device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, int max_steps, cudaTextureObject_t hdri) { 
 	Ray cur_ray = r;
 	Vec3 cur_attenuation = 1.0f;
 	for (int i = 0; i < max_steps; i++) {
@@ -90,14 +90,14 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
 	curand_init(6969 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, Camera* cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
+__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RayTracer* cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	if ((i >= max_x) || (j >= max_y)) return;
 
 	int pixel_index = j * max_x + i;
 	curandState* local_rand_state = &rand_state[pixel_index];
-
+	//printf("%d %d: %p\n", i, j, *scene);
 	Vec3 col(0, 0, 0);
 	for (int s = 0; s < samples; s++) {
 		float u = float(i + curand_uniform(local_rand_state)) / float(max_x);
@@ -119,7 +119,4 @@ __global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, 
 	col += prev;
 	col /= accumulation;
 	surf2Dwrite(col.toGamma().toColor(), surface, i * sizeof(float4), j);
-	
-	//surf2Dwrite(color, surface, i * sizeof(float4), j);
-
 }

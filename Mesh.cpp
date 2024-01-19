@@ -22,8 +22,6 @@ void Mesh::calcAABB() {
         aabb.min.y = min(vertices[i].Position.y, aabb.min.y);
         aabb.min.z = min(vertices[i].Position.z, aabb.min.z);
     }
-    std::cout << "max: " << aabb.max.x << " " << aabb.max.y << " " << aabb.max.z << std::endl;
-    std::cout << "min: " << aabb.min.x << " " << aabb.min.y << " " << aabb.min.z << std::endl;
     std::cout << sizeof(BBox) << std::endl;
 
 

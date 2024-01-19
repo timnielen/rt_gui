@@ -41,12 +41,19 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	cudaGetDeviceProperties(&prop, cudaDevice);
 	std::cout << "Cuda device:" << std::endl;
 	std::cout << cudaDevice << "\t" << prop.name << std::endl;
+	std::cout << "totalGlobalMem: " << "\t" << prop.totalGlobalMem << std::endl;
+	std::cout << "sharedMemPerBlock: " << "\t" << prop.sharedMemPerBlock << std::endl;
+	std::cout << "warpSize: " << "\t" << prop.warpSize << std::endl;
 
 	size_t currStackSize;
 	cudaDeviceGetLimit(&currStackSize, cudaLimitStackSize);
 	std::cout << "currStackSize:" << currStackSize << std::endl;
-
 	cudaDeviceSetLimit(cudaLimitStackSize, 1024 * 8);
+
+	size_t currMallocSize;
+	cudaDeviceGetLimit(&currMallocSize, cudaLimitMallocHeapSize);
+	std::cout << "currMallocSize:" << currMallocSize << std::endl;
+	cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2 * currMallocSize);
 
 	glGenTextures(1, &texture);
 	checkCudaErrors(cudaMallocManaged((void**)&camera, sizeof(Camera)));
@@ -65,7 +72,6 @@ RT_Viewport::RT_Viewport() : size({ -1,-1 }) {
 	checkCudaErrors(cudaDeviceSynchronize());*/
 
 	hdri.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
-
 }
 
 

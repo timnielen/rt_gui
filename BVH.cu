@@ -95,10 +95,7 @@ void constructBVH(BVH* bvh) {
 
 	bool leftLeaf = min(index, indexEnd) == splitPos;
 	bool rightLeaf = max(index, indexEnd) == splitPos + 1;
-	Hitable* left = (leftLeaf) ? bvh->leaves[bvh->sortedIndices[splitPos]] : &(bvh->nodes[splitPos]);
-	Hitable* right = (rightLeaf) ? bvh->leaves[bvh->sortedIndices[splitPos+1]] : &(bvh->nodes[splitPos+1]);
-
-	bvh->nodes[index] = BVH_Node(left, right, leftLeaf, rightLeaf);
+	bvh->nodes[index] = BVH_Node(splitPos, leftLeaf, rightLeaf);
 	AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
 	for (int i = 1; i <= len; i++)
 		aabb = AABB(aabb, bvh->leaves[bvh->sortedIndices[index + i * direction]]->aabb);
@@ -122,18 +119,11 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 	bool hit_anything = false;
 	float closest_so_far = tmax;
 	BVH_Node* node = nodes;
-	/*for (unsigned int i = 0; i < countLeaves; i++) {
-		if (leaves[i]->hit(r, tmin, closest_so_far, temp_rec)) {
-			hit_anything = true;
-			closest_so_far = temp_rec.t;
-			rec = temp_rec;
-		}
-	}*/
 	do
 	{
 		// Check each child node for overlap.
-		Hitable* childL = node->left;
-		Hitable* childR = node->right;
+		Hitable* childL = (node->leftIsLeaf) ? leaves[sortedIndices[node->splitPos]] : &nodes[node->splitPos];
+		Hitable* childR = (node->rightIsLeaf) ? leaves[sortedIndices[node->splitPos+1]] : &nodes[node->splitPos+1];
 		bool overlapL = childL->aabb.hit(r, tmin, closest_so_far);
 		bool overlapR = childR->aabb.hit(r, tmin, closest_so_far);
 

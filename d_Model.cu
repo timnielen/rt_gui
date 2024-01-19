@@ -1,8 +1,8 @@
 #include "d_Model.h"
 #include "cuda_helper.h"
 #include <GL/gl3w.h>
-#include <curand_kernel.h>
 #include <cuda_gl_interop.h>
+#include <curand_kernel.h>
 #include "Sphere.h"
 #include <chrono>
 

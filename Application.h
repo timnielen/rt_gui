@@ -1,14 +1,11 @@
 #pragma once
 #include "imgui.h"
-#include "Viewport.h"
 #include "Shader.h"
-#include "RT_Viewport.h"
+#include "DynamicViewport.h"
 
 class App {
 private:
-	RT_Viewport* rt_viewport;
-	Viewport* viewport;
-	Shader shader;
+	DynamicViewport* viewport;
 public:
 	App();
 	void renderUI(ImGuiIO& io);
