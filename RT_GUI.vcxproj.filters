@@ -182,6 +182,9 @@
     <ClInclude Include="GlobalTypes.h">
       <Filter>includes</Filter>
     </ClInclude>
+    <ClInclude Include="GraphicsResource.h">
+      <Filter>includes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Model.cpp">

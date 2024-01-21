@@ -8,7 +8,10 @@ struct cudaSurface {
 	cudaSurfaceObject_t surfaceObject;
 	uint glTexture;
 	cudaSurface() {}
-	cudaSurface(const uint& tex) : glTexture(tex) {
+	void init(const uint& tex) {
+		glTexture = tex;
+		if (gfxRes != NULL)
+			destroy();
 		checkCudaErrors(cudaGraphicsGLRegisterImage(&gfxRes, tex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 	}
 	void map() {
@@ -27,7 +30,8 @@ struct cudaSurface {
 		checkCudaErrors(cudaGraphicsUnmapResources(1, &gfxRes));
 	}
 
-	~cudaSurface() {
+	void destroy() {
+		std::cout << "Cuda Texture unloaded." << std::endl;
 		checkCudaErrors(cudaGraphicsUnregisterResource(gfxRes));
 		gfxRes = NULL;
 		checkCudaErrors(cudaDestroySurfaceObject(surfaceObject));
@@ -38,11 +42,15 @@ struct cudaTexture {
 	cudaGraphicsResource_t gfxRes = NULL;
 	cudaTextureObject_t texObject;
 	uint glTexture;
-	cudaTexture() {}
-	cudaTexture(uint tex) : glTexture(tex) {
+	void init(uint tex) {
+		glTexture = tex;
+		if (gfxRes != NULL)
+			destroy();
+		std::cout << "texture: " << tex << std::endl;
 		checkCudaErrors(cudaGraphicsGLRegisterImage(&gfxRes, tex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsReadOnly));
 	}
 	void map() {
+		if (gfxRes == NULL) std::cout << "error!!" << std::endl;
 		checkCudaErrors(cudaGraphicsMapResources(1, &gfxRes));
 
 		struct cudaTextureDesc texDesc;
@@ -65,7 +73,8 @@ struct cudaTexture {
 	void unmap() {
 		checkCudaErrors(cudaGraphicsUnmapResources(1, &gfxRes));
 	}
-	~cudaTexture() {
+	void destroy() {
+		std::cout << "Cuda Texture unloaded." << std::endl;
 		checkCudaErrors(cudaGraphicsUnregisterResource(gfxRes));
 		gfxRes = NULL;
 		checkCudaErrors(cudaDestroyTextureObject(texObject));
