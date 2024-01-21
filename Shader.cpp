@@ -94,7 +94,9 @@ void Shader::link() {
 	if (!success) {
 		glGetProgramInfoLog(ID, 512, NULL, infoLog);
 		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
+	} else
+		std::cout << "Linked shaderprogram.\n" << std::endl;
+
 	glDeleteShader(vertex);
 	glDeleteShader(geometry);
 	glDeleteShader(fragment);

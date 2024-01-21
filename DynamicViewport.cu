@@ -7,7 +7,7 @@
 
 
 DynamicViewport::DynamicViewport() : size({ -1,-1 }) {
-	scene = Model("assets/monkey.obj");
+	scene = Model("assets/Survival_BackPack_2/backpack.obj");
 	camera = new RayTracer(scene);
 	camera->setPosition(glm::vec3(0, 0, 3));
 }

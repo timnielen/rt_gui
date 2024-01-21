@@ -36,8 +36,9 @@ public:
 
 class Rasterizer : public Camera {
 public:
-	Rasterizer(Model scene) : scene(scene) {
-
+	Rasterizer(const Model& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_MULTISAMPLE);
 	}
 	void updateView() override;
 	void resize(int width, int height) override;
@@ -46,6 +47,7 @@ private:
 	Model scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
+	glm::vec4 clearColor = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 	Shader shader;
 	uint intermediateFBO = 0;
 	uint framebuffer = 0;
@@ -58,7 +60,7 @@ class RayTracer : public Camera {
 public:
 	RayTracer(const Model& scene) {
 		this->scene = d_Model(scene).hitable;
-		environment.init(load_texture("./assets/hdri/rural_crossroads_4k.hdr"));
+		environment.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
 	}
 	__device__ Ray getRay(float u, float v) {
 		auto pixel_center = pixel00_loc + (u * viewportU * right) + (v * viewportV * up);
