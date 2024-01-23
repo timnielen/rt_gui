@@ -74,6 +74,11 @@ void Mesh::render(Shader& shader, bool points) {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
     unsigned int normalNr = 1;
+
+    shader.setBool("material.sampleDiffuse", false);
+    shader.setBool("material.sampleSpecular", false);
+    shader.setBool("material.sampleNormal", false);
+
     for (unsigned int i = 0; i < textures.size(); i++)
     {
         glActiveTexture(GL_TEXTURE0 + i); // activate proper texture unit before binding
@@ -81,11 +86,21 @@ void Mesh::render(Shader& shader, bool points) {
         std::string number;
         std::string name = textures[i].type;
         if (name == "texture_diffuse")
+        {
             number = std::to_string(diffuseNr++);
+            shader.setBool("material.sampleDiffuse", true);
+
+        }
         else if (name == "texture_specular")
+        {
             number = std::to_string(specularNr++);
+            shader.setBool("material.sampleSpecular", true);
+        }
         else if (name == "texture_normal")
+        {
             number = std::to_string(normalNr++);
+            shader.setBool("material.sampleNormal", true);
+        }
 
         shader.setInt(("material." + name + number).c_str(), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);

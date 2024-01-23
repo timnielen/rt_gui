@@ -3,12 +3,60 @@
 #include <glm/gtx/matrix_cross_product.hpp>
 #include "raytracing.h"
 
-void Camera::setPosition(glm::vec3 pos) {
-	position = pos;
-	updateView();
+Camera::Camera(const Model& scene) {
+	renderer[CAMERA_RENDERER_RASTERIZER] = new Rasterizer(scene);
+	renderer[CAMERA_RENDERER_RAYTRACER] = new RayTracer(scene);
 }
 
-void Rasterizer::resize(int width, int height) {
+Camera::~Camera() {
+	for (int i = 0; i < CAMERA_RENDERER_COUNT; i++)
+		delete renderer[i];
+}
+
+void Camera::setPosition(glm::vec3 pos) {
+	position = pos;
+	update();
+}
+
+void Camera::update() {
+	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction.y = sin(glm::radians(pitch));
+	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction = glm::normalize(direction);
+
+	position = focalPoint - distance * direction;
+
+	glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	right = glm::normalize(glm::cross(worldUp, direction));
+	up = glm::cross(direction, right);
+
+	for (int i = 0; i < CAMERA_RENDERER_COUNT; i++)
+		renderer[i]->setViewVectors(position, direction, right, up);
+}
+void Camera::resize(const int& width, const int& height) {
+	for (int i = 0; i < CAMERA_RENDERER_COUNT; i++)
+		renderer[i]->resize(width, height, fov, nearPlane, farPlane);
+}
+uint Camera::render() {
+	return renderer[activeRenderer]->render();
+}
+
+void Rasterizer::updateView() {
+	view = glm::lookAt(position, position + direction, up);
+}
+
+void RayTracer::updateView() {
+	// Calculate the location of the upper left pixel.
+	Vec3 upperLeft = position + (direction * nearPlane) - (right * viewportU / 2) - (up * viewportV / 2);
+	pixel00_loc = upperLeft + 0.5 * (pixelDeltaU * right + pixelDeltaV * up);
+
+	accumulation = 0;
+	if (deviceCopy == nullptr)
+		cudaMallocManaged((void**)&deviceCopy, sizeof(RayTracer));
+	*deviceCopy = *this;
+}
+
+void Rasterizer::resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) {
 	imageWidth = width;
 	imageHeight = height;
 	float aspect = (float)width / (float)height;
@@ -60,7 +108,10 @@ void Rasterizer::resize(int width, int height) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void RayTracer::resize(int width, int height) {
+void RayTracer::resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) {
+	this->fov = fov;
+	this->nearPlane = nearPlane;
+	this->farPlane = farPlane;
 	imageWidth = width;
 	imageHeight = height;
 	float aspect = (float)width / (float)height;
@@ -96,38 +147,7 @@ void RayTracer::resize(int width, int height) {
 	updateView();
 }
 
-void Rasterizer::updateView() {
-	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction.y = sin(glm::radians(pitch));
-	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction = glm::normalize(direction);
 
-	glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
-	right = glm::normalize(glm::cross(worldUp, direction));
-	up = glm::cross(direction, right);
-
-	view = glm::lookAt(position, position + direction, up);
-}
-
-void RayTracer::updateView() {
-	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction.y = sin(glm::radians(pitch));
-	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction = glm::normalize(direction);
-
-	glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
-	right = glm::normalize(glm::cross(worldUp, direction));
-	up = glm::cross(direction, right);
-
-	// Calculate the location of the upper left pixel.
-	Vec3 upperLeft = position + (direction * nearPlane) - (right * viewportU / 2) - (up * viewportV / 2);
-	pixel00_loc = upperLeft + 0.5 * (pixelDeltaU * right + pixelDeltaV * up);
-
-	accumulation = 0;
-	if (deviceCopy == nullptr)
-		cudaMallocManaged((void**)&deviceCopy, sizeof(RayTracer));
-	*deviceCopy = *this;
-}
 
 uint RayTracer::render() {
 	dim3 blocks(imageWidth / blockW + 1, imageHeight / blockH + 1);

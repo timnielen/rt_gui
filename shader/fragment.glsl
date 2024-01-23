@@ -5,6 +5,9 @@ struct Material {
     sampler2D texture_diffuse1;
     sampler2D texture_specular1;
     sampler2D texture_normal1;
+    bool sampleDiffuse;
+    bool sampleSpecular;
+    bool sampleNormal;
     float shininess;
 };
 
@@ -38,6 +41,8 @@ uniform Material material;
 uniform PointLight pLight;
 uniform DirLight dLight;
 
+vec4 defaultDiffuse = vec4(1, 0.1, 0.5, 1);
+vec4 defaultSpecular = vec4(0.1, 0.1, 0.1, 1);
 
 vec3 strengthPointLight(PointLight light, vec3 normal, vec3 viewDir) {
 
@@ -64,19 +69,28 @@ vec4 strengthDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 reflectDir = reflect(lightDir, normal);
 
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-
-    vec4 ambient = vec4(light.ambient, 1) * texture(material.texture_diffuse1, TexCoords);
-    vec4 diffuse = vec4(light.diffuse, 1) * diff * texture(material.texture_diffuse1, TexCoords);
-    vec4 specular = vec4(light.specular, 1) * spec * texture(material.texture_specular1, TexCoords);
+    
+    vec4 matDiffuse = defaultDiffuse;
+    vec4 matSpecular = defaultSpecular;
+    if (material.sampleDiffuse)
+        matDiffuse = texture(material.texture_diffuse1, TexCoords);
+    if (material.sampleSpecular)
+        matSpecular = texture(material.texture_specular1, TexCoords);
+    vec4 ambient = vec4(light.ambient, 1) * matDiffuse;
+    vec4 diffuse = vec4(light.diffuse, 1) * diff * matDiffuse;
+    vec4 specular = vec4(light.specular, 1) * spec * matSpecular;
     return ambient + diffuse + specular;
 }
 
 void main()
 {
-    vec3 normal = texture(material.texture_normal1, TexCoords).rgb;
-    normal = 2 * normal - 1;
-    normal = normalize(TBN * normal);
-    //normal = normalize(Normal);
+    vec3 normal = Normal;
+    if (material.sampleNormal) {
+        normal = texture(material.texture_normal1, TexCoords).rgb;
+        normal = 2 * normal - 1;
+        normal = normalize(TBN * normal);
+    }
+
     vec3 viewDir = normalize(viewPos - WorldPos);
 
     FragColor = strengthDirLight(dLight, normal, viewDir); //strengthPointLight(pLight, norm, viewDir) + 

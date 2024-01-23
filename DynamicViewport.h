@@ -7,11 +7,15 @@
 #include "d_Model.h"
 #include "Ray.h"
 
+struct ViewportSettings {
+	uint renderer = CAMERA_RENDERER_RASTERIZER;
+};
+
 
 class DynamicViewport
 {
 private:
-	Camera* camera;
+	Camera *camera;
 	ImVec2 size;
 	Model scene;
 	void updateFramebuffer();
@@ -21,6 +25,10 @@ private:
 	ImVec2 lastMousePos = { 0,0 };
 
 public:	
+	ViewportSettings settings;
+	void updateSettings() {
+		camera->setRenderer(settings.renderer);
+	}
 	DynamicViewport();
 	~DynamicViewport();
 	void draw(float deltaTime);

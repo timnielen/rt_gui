@@ -10,44 +10,77 @@
 #include "GlobalTypes.h"
 #include "cuda_helper.h"
 
+#define CAMERA_RENDERER_COUNT 2
+#define CAMERA_RENDERER_RASTERIZER 0
+#define CAMERA_RENDERER_RAYTRACER 1
+
+
+class Renderer {
+protected:
+	glm::vec3 position;
+	glm::vec3 right;
+	glm::vec3 up;
+	glm::vec3 direction;
+	int imageWidth = 0;
+	int imageHeight = 0;
+	float fov, nearPlane, farPlane;
+	virtual void updateView() = 0;
+public:
+	void setViewVectors(const glm::vec3& position, const glm::vec3& direction, const glm::vec3& right, const glm::vec3& up) {
+		this->position = position;
+		this->direction = direction;
+		this->right = right;
+		this->up = up;
+		updateView();
+	}
+	virtual uint render() = 0;
+	virtual void resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) = 0;
+};
 
 class Camera
 {
+private:
+	Renderer* renderer[CAMERA_RENDERER_COUNT];
+	uint activeRenderer = CAMERA_RENDERER_RASTERIZER;
 public:
-	//Rasterization
+	Camera(const Model& scene);
+	~Camera();
+	void setRenderer(uint renderer) {
+		activeRenderer = renderer;
+	}
 	glm::vec3 position = glm::vec3(0);
 	glm::vec3 right = glm::vec3(1, 0, 0);
 	glm::vec3 up = glm::vec3(0, 1, 0);
 	glm::vec3 direction = glm::vec3(0,0,-1);
+	float distance = 5;
+	glm::vec3 focalPoint = glm::vec3(0);
 	float yaw = -90.0f;
 	float pitch = 0.0f;
 
 	float fov = 45.0f;
 	float nearPlane = 0.1f;
 	float farPlane = 1000.f;
-	int imageWidth = 0;
-	int imageHeight = 0;
 	void setPosition(glm::vec3 pos);
-	virtual void updateView() = 0;
-	virtual void resize(int width, int height) = 0;
-	virtual uint render() = 0;
-
+	void update();
+	void resize(const int& width, const int& height);
+	uint render();
 };
 
-class Rasterizer : public Camera {
+
+class Rasterizer : public Renderer {
 public:
 	Rasterizer(const Model& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 	}
 	void updateView() override;
-	void resize(int width, int height) override;
+	void resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) override;
 	uint render() override;
 private:
 	Model scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
-	glm::vec4 clearColor = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+	glm::vec4 clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 	Shader shader;
 	uint intermediateFBO = 0;
 	uint framebuffer = 0;
@@ -56,7 +89,7 @@ private:
 	uint rbo = 0;
 };
 
-class RayTracer : public Camera {
+class RayTracer : public Renderer {
 public:
 	RayTracer(const Model& scene) {
 		this->scene = d_Model(scene).hitable;
@@ -68,7 +101,7 @@ public:
 		return Ray(Vec3(position), ray_direction);
 	}
 	void updateView() override;
-	void resize(int width, int height) override;
+	void resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) override;
 	uint render() override;
 	int samples = 1;
 	int max_steps = 5;
