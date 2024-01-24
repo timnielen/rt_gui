@@ -4,7 +4,6 @@
 #include "Shader.h"
 #include <cstdbool>
 #include "Model.h"
-#include "d_Model.h"
 #include "Ray.h"
 
 struct ViewportSettings {

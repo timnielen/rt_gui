@@ -3,6 +3,7 @@
 #include <vector>
 #include "Shader.h"
 #include "Ray.h"
+#include "Hit.h"
 
 
 struct BBox {
@@ -31,13 +32,21 @@ public:
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture>      textures;
-    BBox aabb;
+    AABB aabb;
     unsigned int aabbVAO;
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, AABB aabb);
     void renderAABB(Shader& shader);
     void render(Shader& shader, bool points = false);
     Hit intersect(Ray& r, glm::mat4 transform = glm::mat4(1));
     unsigned int VAO, VBO, EBO;
+
+    Hitable** bvh = nullptr;
+    Hitable** triangles = nullptr;
+    Material** mat;
+    cudaGraphicsResource_t cudaEBO;
+    cudaGraphicsResource_t cudaVBO;
+    void loadToDevice(Hitable** output);
+    void unmap();
 private:
     //  render data
     void calcAABB();
@@ -46,3 +55,24 @@ private:
 
 
 glm::vec3 transformPoint(glm::vec3 p, glm::mat4 transform);
+
+
+class Triangle : public Hitable {
+public:
+    int indexA, indexB, indexC;
+    Vertex* vertices;
+    Material* mat;
+    __device__ __host__ Triangle() {}
+    __device__ __host__ Triangle(int indexA, int indexB, int indexC, Vertex* vertices, Material* mat) : indexA(indexA), indexB(indexB), indexC(indexC), vertices(vertices), mat(mat) {
+        Vec3 posA = vertices[indexA].Position;
+        Vec3 posB = vertices[indexB].Position;
+        Vec3 posC = vertices[indexC].Position;
+
+        Vec3 min = Vec3(fmin(fmin(posA.x, posB.x), posC.x), fmin(fmin(posA.y, posB.y), posC.y), fmin(fmin(posA.z, posB.z), posC.z));
+        Vec3 max = Vec3(fmax(fmax(posA.x, posB.x), posC.x), fmax(fmax(posA.y, posB.y), posC.y), fmax(fmax(posA.z, posB.z), posC.z));
+        aabb = AABB(min, max);
+    }
+    __device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override;
+};
+
+__global__ void combineHitables(Hitable** output, Hitable** hlist, int count);

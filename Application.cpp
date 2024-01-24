@@ -47,7 +47,7 @@ void App::renderUI(ImGuiIO& io) {
 	ImGui::ShowDemoWindow();
 
 	ImGui::Begin("Settings");
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+	ImGui::Text("Framerate %.3f ms/frame (%.1f FPS)", 1000.0f * io.DeltaTime, 1.0f / io.DeltaTime);
 	
 	/*ImGui::Checkbox("Wireframe", &(viewport->settings.wireframe));
 	if (ImGui::Button("Reload shader")) {

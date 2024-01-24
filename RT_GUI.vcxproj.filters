@@ -58,9 +58,6 @@
     <ClCompile Include="Grid.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="cuda_helper.cpp">
       <Filter>sources</Filter>
     </ClCompile>
@@ -142,7 +139,6 @@
     <ClInclude Include="Model.h">
       <Filter>includes</Filter>
     </ClInclude>
-    <ClInclude Include="Helper.h" />
     <ClInclude Include="Vec3.h">
       <Filter>includes</Filter>
     </ClInclude>
@@ -170,9 +166,6 @@
     <ClInclude Include="sort.h">
       <Filter>includes</Filter>
     </ClInclude>
-    <ClInclude Include="d_Model.h">
-      <Filter>includes</Filter>
-    </ClInclude>
     <ClInclude Include="cuda_helper.h">
       <Filter>includes</Filter>
     </ClInclude>
@@ -190,9 +183,6 @@
     <CudaCompile Include="Model.cpp">
       <Filter>sources</Filter>
     </CudaCompile>
-    <CudaCompile Include="d_Model.cu">
-      <Filter>sources</Filter>
-    </CudaCompile>
     <CudaCompile Include="sort.cu">
       <Filter>sources</Filter>
     </CudaCompile>
@@ -203,6 +193,9 @@
       <Filter>sources</Filter>
     </CudaCompile>
     <CudaCompile Include="Camera.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Mesh.cu">
       <Filter>sources</Filter>
     </CudaCompile>
   </ItemGroup>

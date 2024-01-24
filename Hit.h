@@ -32,12 +32,17 @@ public:
 
 class HitableList : public Hitable {
 public:
-	__device__ HitableList(Hitable** list, unsigned int length) : list(list), list_length(length) {
+	__device__ HitableList(Hitable** list, const unsigned int& length) : list(list), list_length(length) {
 		if (list_length == 0) return;
 		aabb = list[0]->aabb;
 		for (unsigned int i = 1; i < list_length; i++) {
 			aabb = AABB(aabb, list[i]->aabb);
 		}
+	}
+
+	__device__ HitableList(Hitable** list, const unsigned int& length, const AABB& aabb) : list(list), list_length(length) {
+		if (list_length == 0) return;
+		this->aabb = aabb;
 	}
 
 	__device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override {

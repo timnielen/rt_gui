@@ -3,12 +3,12 @@
 #include <glm/glm.hpp>
 #include "Shader.h"
 #include "Model.h"
-#include "d_Model.h"
 #include "GlobalTypes.h"
 #include "File.h"
 #include "GraphicsResource.h"
 #include "GlobalTypes.h"
 #include "cuda_helper.h"
+#include <curand_kernel.h>
 
 #define CAMERA_RENDERER_COUNT 2
 #define CAMERA_RENDERER_RASTERIZER 0
@@ -92,7 +92,7 @@ private:
 class RayTracer : public Renderer {
 public:
 	RayTracer(const Model& scene) {
-		this->scene = d_Model(scene).hitable;
+		this->scene = scene.hitable;
 		environment.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
 	}
 	__device__ Ray getRay(float u, float v) {

@@ -7,7 +7,6 @@
 #include "Material.h"
 #include <curand_kernel.h>
 #include "BVH.h"
-#include "d_Model.h"
 
 __device__
 float2 sampleSphericalMap(Vec3 direction)

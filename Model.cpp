@@ -2,6 +2,12 @@
 #include <iostream>
 #include "File.h"
 #include <limits>
+#include "cuda_helper.h"
+#include <GL/gl3w.h>
+#include <cuda_gl_interop.h>
+#include <curand_kernel.h>
+#include <chrono>
+
 
 void printMat4(glm::mat4 m) {
     for (int i = 0; i < 4; i++)
@@ -14,7 +20,7 @@ void printMat4(glm::mat4 m) {
 
 void Model::loadModel(std::string path) {
     Assimp::Importer import;
-    const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -36,7 +42,8 @@ void Model::processNode(aiNode* node, const aiScene* scene, const glm::mat4 inhe
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        meshes.push_back(processMesh(mesh, scene));
+        Mesh processedMesh = processMesh(mesh, scene);
+        meshes.push_back(processedMesh);
         transformations.push_back(transformation);
     }
     // then do the same for each of its children
@@ -64,16 +71,16 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         vector.y = mesh->mNormals[i].y;
         vector.z = mesh->mNormals[i].z;
         vertex.Normal = vector;
-        vector.x = mesh->mTangents[i].x;
-        vector.y = mesh->mTangents[i].y;
-        vector.z = mesh->mTangents[i].z;
-        vertex.Tangent = vector;
-        vector.x = mesh->mBitangents[i].x;
-        vector.y = mesh->mBitangents[i].y;
-        vector.z = mesh->mBitangents[i].z;
-        vertex.Bitangent = vector;
         if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
         {
+            vector.x = mesh->mTangents[i].x;
+            vector.y = mesh->mTangents[i].y;
+            vector.z = mesh->mTangents[i].z;
+            vertex.Tangent = vector;
+            vector.x = mesh->mBitangents[i].x;
+            vector.y = mesh->mBitangents[i].y;
+            vector.z = mesh->mBitangents[i].z;
+            vertex.Bitangent = vector;
 
             glm::vec2 vec;
             vec.x = mesh->mTextureCoords[0][i].x;
@@ -84,7 +91,8 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         }
         else
         {
-            std::cout << "Mesh doesn't contain texture coords" << std::endl;
+            vertex.Tangent = glm::vec3(0.0f);
+            vertex.Bitangent = glm::vec3(0.0f);
             vertex.TexCoords = glm::vec2(0.0f, 0.0f);
         }
         vertices.push_back(vertex);
@@ -108,8 +116,11 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
         textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
     }
-
-    return Mesh(vertices, indices, textures);
+    //process AABB
+    auto min = mesh->mAABB.mMin;
+    auto max = mesh->mAABB.mMax;
+    AABB aabb = AABB(Vec3(min.x, min.y, min.z), Vec3(max.x,max.y,max.z));
+    return Mesh(vertices, indices, textures, aabb);
 }
 
 std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
@@ -199,4 +210,37 @@ glm::mat4 Model::getModelTransformation() const {
     transform = glm::rotate(transform, angle, rotationAxis);
     transform = glm::scale(transform, scale);
     return transform;
+}
+
+
+void Model::loadToDevice() {
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
+    int meshCount = meshes.size();
+
+    Hitable** hlist;
+    cudaMalloc((void**)&hlist, meshCount * sizeof(Hitable*));
+
+    auto t1 = high_resolution_clock::now();
+
+    for (int i = 0; i < meshCount; i++) {
+        meshes[i].loadToDevice(hlist + i);
+    }
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    auto t2 = high_resolution_clock::now();
+    std::cout << "loading meshes into cuda took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
+
+    cudaMalloc((void**)&hitable, sizeof(Hitable*));
+    combineHitables << <1, 1 >> > (this->hitable, hlist, meshCount);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+
+    auto t3 = high_resolution_clock::now();
+    std::cout << "combining meshes  took " << duration_cast<milliseconds>(t3 - t2).count() << "ms" << std::endl;
 }

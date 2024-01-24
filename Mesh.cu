@@ -1,11 +1,18 @@
 #include "Mesh.h"
 #include "GL/gl3w.h"
 #include <iostream>
+#include <cuda_gl_interop.h>
+#include "Material.h"
+#include "BVH.h"
+#include "cuda_helper.h"
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures) {
+#define BLOCK_SIZE 256
+
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, AABB aabb) {
     this->vertices = vertices;
     this->indices = indices;
     this->textures = textures;
+    this->aabb = aabb;
     calcAABB();
     setupMesh();
 }
@@ -36,7 +43,7 @@ void Mesh::calcAABB() {
 
     // vertex positions
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
 
 void Mesh::setupMesh() {
@@ -109,7 +116,7 @@ void Mesh::render(Shader& shader, bool points) {
 
     // draw mesh
     glBindVertexArray(VAO);
-    if(points)
+    if (points)
         glDrawElements(GL_POINTS, indices.size(), GL_UNSIGNED_INT, 0);
     else
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
@@ -117,12 +124,77 @@ void Mesh::render(Shader& shader, bool points) {
 }
 
 void Mesh::renderAABB(Shader& shader) {
-    shader.setVec3("color", glm::normalize(aabb.max - aabb.min));
+    shader.setVec3("color", normalize(aabb.max - aabb.min).toGLM());
     glBindVertexArray(aabbVAO);
     glDrawArrays(GL_LINES, 0, 2);
     glBindVertexArray(0);
 }
 
+__global__ void loadMaterial(Material** mat) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index != 0) return;
+    *mat = new Lambertian(Vec3(1, 0.1f, 0.5f));
+}
+
+__global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Vertex* vertices, Material** mat) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= triCount) return;
+    hlist[index] = new Triangle(indices[3 * index], indices[3 * index + 1], indices[3 * index + 2], vertices, *mat);
+}
+
+__global__ void combineHitables(Hitable** output, Hitable** hlist, int count, AABB aabb) {
+    if (blockIdx.x != 0 || threadIdx.x != 0) return;
+    if (count == 1) {
+        *output = *hlist;
+        return;
+    }
+    BVH* bvh = new BVH(HitableList(hlist, count, aabb));
+    constructBVH << <(count + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
+    *output = bvh;
+}
+
+__global__ void combineHitables(Hitable** output, Hitable** hlist, int count) {
+    if (blockIdx.x != 0 || threadIdx.x != 0) return;
+    if (count == 1) {
+        *output = *hlist;
+        return;
+    }
+    BVH* bvh = new BVH(HitableList(hlist, count));
+    constructBVH << <(count + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
+    *output = bvh;
+}
+
+void Mesh::loadToDevice(Hitable** output) {
+    cudaGraphicsGLRegisterBuffer(&cudaVBO, VBO, cudaGraphicsRegisterFlagsReadOnly);
+    cudaGraphicsGLRegisterBuffer(&cudaEBO, EBO, cudaGraphicsRegisterFlagsReadOnly);
+
+    int* indices;
+    cudaGraphicsMapResources(1, &cudaEBO, 0);
+    size_t num_bytes;
+    cudaGraphicsResourceGetMappedPointer((void**)&indices, &num_bytes, cudaEBO);
+    int countTriangles = (num_bytes / sizeof(int)) / 3;
+
+    Vertex* vertices;
+    cudaGraphicsMapResources(1, &cudaVBO, 0);
+    cudaGraphicsResourceGetMappedPointer((void**)&vertices, &num_bytes, cudaVBO);
+
+    cudaMalloc((void**)&triangles, countTriangles * sizeof(Hitable*));
+    cudaMalloc((void**)&mat, sizeof(Material*));
+    loadMaterial << <1, 1 >> > (mat);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    loadTriangles << <(countTriangles + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (triangles, indices, countTriangles, vertices, mat);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    combineHitables << <1, 1 >> > (output, triangles, countTriangles, aabb);
+}
+
+void Mesh::unmap() {
+    cudaGraphicsUnmapResources(1, &cudaEBO, 0);
+    cudaGraphicsUnmapResources(1, &cudaVBO, 0);
+}
 
 Hit BBox::intersect(Ray& r, glm::mat4 transform) {
     Hit h;
@@ -147,7 +219,7 @@ Hit BBox::intersect(Ray& r, glm::mat4 transform) {
         tymax = (min.y - r.origin.y) * r.invDir.y;
     }
 
-    if (tmin > tymax || tymin > tmax) 
+    if (tmin > tymax || tymin > tmax)
         return h;
 
     if (tymin > tmin)
@@ -170,7 +242,7 @@ Hit BBox::intersect(Ray& r, glm::mat4 transform) {
         return h;
 
     h.hit = true;
-    h.t = min(tmin, tzmin);
+    h.t = (((tmin) < (tzmin)) ? (tmin) : (tzmin));
 
     return h;
 }
@@ -182,15 +254,15 @@ glm::vec3 transformPoint(glm::vec3 p, glm::mat4 transform) {
 
 Hit Mesh::intersect(Ray& r, glm::mat4 transform) {
     Hit h;
-    if (!aabb.intersect(r, transform).hit)
-        return h;
+    /*if (!aabb.intersect(r, transform).hit)
+        return h;*/
     glm::vec3 origin = r.origin.toGLM();
     glm::vec3 direction = r.direction.toGLM();
-    for (unsigned int i = 0; i < indices.size(); i+=3) {
+    for (unsigned int i = 0; i < indices.size(); i += 3) {
         glm::vec3 v1 = transformPoint(vertices[indices[i]].Position, transform);
-        glm::vec3 v2 = transformPoint(vertices[indices[i+1]].Position, transform);
-        glm::vec3 v3 = transformPoint(vertices[indices[i+2]].Position, transform);
-        
+        glm::vec3 v2 = transformPoint(vertices[indices[i + 1]].Position, transform);
+        glm::vec3 v3 = transformPoint(vertices[indices[i + 2]].Position, transform);
+
         glm::vec3 edge1 = v2 - v1;
         glm::vec3 edge2 = v3 - v1;
         const float EPSILON = 0.00001f;
@@ -209,7 +281,7 @@ Hit Mesh::intersect(Ray& r, glm::mat4 transform) {
             continue;
 
         glm::vec3 sXe1 = glm::cross(s, edge1);
-        float v = invDet * glm::dot(direction,sXe1);
+        float v = invDet * glm::dot(direction, sXe1);
 
         if (v < 0.0 || u + v > 1.0)
             continue;
@@ -225,3 +297,42 @@ Hit Mesh::intersect(Ray& r, glm::mat4 transform) {
     return h;
 }
 
+__device__ bool Triangle::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
+    /*if (!aabb.hit(r, tmin, tmax))
+        return false;*/
+    Vec3 edge1 = vertices[indexB].Position - vertices[indexA].Position;
+    Vec3 edge2 = vertices[indexC].Position - vertices[indexA].Position;
+    const float EPSILON = 1.0e-6f;
+
+    Vec3 rayVecXe2 = cross(r.direction, edge2);
+    float det = dot(edge1, rayVecXe2);
+
+    if (det > -EPSILON && det < EPSILON)
+        return false;    // This ray is parallel to this triangle.
+
+    float invDet = 1.0f / det;
+    Vec3 s = r.origin - vertices[indexA].Position;
+    float u = invDet * dot(s, rayVecXe2);
+
+    if (u < 0.0f || u > 1.0f)
+        return false;
+
+    Vec3 sXe1 = cross(s, edge1);
+    float v = invDet * dot(r.direction, sXe1);
+
+    if (v < 0.0f || u + v > 1.0f)
+        return false;
+
+    // At this stage we can compute t to find out where the intersection point is on the line.
+    float t = invDet * dot(edge2, sXe1);
+    if (t >= tmin && t <= tmax)
+    {
+        rec.t = t;
+        rec.p = r.at(t);
+        rec.set_face_normal(r, (1 - u - v) * vertices[indexA].Normal + u * vertices[indexB].Normal + v * vertices[indexC].Normal);
+        rec.mat = mat;
+        return true;
+    }
+
+    return false;
+}

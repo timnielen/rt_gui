@@ -15,6 +15,7 @@ public:
     Model(const char* path, bool flipTextures = true) : flipTextures(flipTextures)
     {
         loadModel(path);
+        loadToDevice();
     }
     void render(Shader& shader, bool points = false);
     void renderAABB(Shader& shader);
@@ -26,6 +27,8 @@ public:
     std::vector<Mesh> getMeshes() const { return meshes; }
     std::vector<glm::mat4> getMeshTransformations() const { return transformations; }
     glm::mat4 getModelTransformation() const;
+
+    Hitable** hitable;
 private:
     // model data
     std::vector<Mesh> meshes;
@@ -36,6 +39,8 @@ private:
     void processNode(aiNode* node, const aiScene* scene, glm::mat4 inheritedTransformation);
     Mesh processMesh(aiMesh* mesh, const aiScene* scene);
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
+    void loadToDevice();
+
 };
 
 

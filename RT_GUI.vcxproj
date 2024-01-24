@@ -107,7 +107,6 @@
     <ClCompile Include="File.cpp" />
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -143,7 +142,6 @@
     <ClInclude Include="GraphicsResource.h" />
     <ClInclude Include="Grid.h" />
     <ClInclude Include="Material.h" />
-    <ClInclude Include="Helper.h" />
     <ClInclude Include="Hit.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
@@ -152,15 +150,14 @@
     <ClInclude Include="Shader.h" />
     <ClInclude Include="sort.h" />
     <ClInclude Include="Sphere.h" />
-    <ClInclude Include="d_Model.h" />
     <ClInclude Include="Vec3.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="BVH.cu" />
     <CudaCompile Include="Camera.cu" />
     <CudaCompile Include="DynamicViewport.cu" />
+    <CudaCompile Include="Mesh.cu" />
     <CudaCompile Include="Model.cpp" />
-    <CudaCompile Include="d_Model.cu" />
     <CudaCompile Include="sort.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
