@@ -201,7 +201,7 @@ void Scene::render(Shader& shader, bool points)
     {
         const Mesh& mesh = meshes[i];
         shader.setMat4("model", transform * transformations[i]);
-        const MultiMaterial& mat = materials.size() > 0 ? materials[mesh.materialIndex-1] : DEFAULT_MATERIAL;
+        const MultiMaterial& mat = mesh.materialIndex > 0 ? materials[mesh.materialIndex-1] : DEFAULT_MATERIAL;
         uint activeTexture = 0;
         for (uint j = 0; j < textureTypeCount; j++) {
             std::string type;

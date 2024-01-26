@@ -16,14 +16,14 @@ class DynamicViewport
 private:
 	Camera *camera;
 	ImVec2 size;
-	Scene scene;
 	void updateFramebuffer();
 	void handleUserInput(float deltaTime);
 	float mouseSensitivity = 0.1f;
 	bool firstMouse = true;
 	ImVec2 lastMousePos = { 0,0 };
 
-public:	
+public:
+	Scene scene;
 	ViewportSettings settings;
 	void updateSettings() {
 		camera->setRenderer((RenderType)settings.renderer);

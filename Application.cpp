@@ -69,6 +69,28 @@ void App::renderUI(ImGuiIO& io) {
 	ImGui::InputInt("Samples", &(rt_viewport->samples), 1);
 	ImGui::InputInt("Max Steps", &(rt_viewport->max_steps), 1);*/
 
+	if (ImGui::TreeNode("Materials"))
+	{
+		for (int i = 0; i < viewport->scene.materials.size(); i++)
+		{
+			// Use SetNextItemOpen() so set the default state of a node to be open. We could
+			// also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
+			if (i == 0)
+				ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
+			MultiMaterial& mat = viewport->scene.materials[i];
+			if (ImGui::TreeNode((void*)(intptr_t)i, mat.name.c_str(), i))
+			{
+				ImGui::Text("Opacity %.2f", mat.opacity);
+				ImGui::Text("Refraction Index %.2f", mat.refractionIndex);
+				ImGui::Text("Shininess %.2f", mat.shininess);
+				ImGui::Text("Shininess Strength %.2f", mat.shininessStrength);
+				ImGui::TreePop();
+			}
+		}
+		ImGui::TreePop();
+	}
+
 	if (ImGui::InputInt("Renderer", (int*)&(viewport->settings.renderer))) {
 		if (viewport->settings.renderer > renderTypeCount - 1)
 			viewport->settings.renderer = renderTypeCount - 1;

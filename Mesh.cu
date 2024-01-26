@@ -97,7 +97,7 @@ void Mesh::renderAABB(Shader& shader) {
 __global__ void loadMaterial(Material** mat) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index != 0) return;
-    *mat = new Lambertian(Vec3(1, 0.1f, 0.5f));
+    *mat = new Lambertian(Vec3(1));
 }
 
 __global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Vertex* vertices, Material** mat) {
