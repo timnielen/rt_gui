@@ -136,7 +136,7 @@
     <ClInclude Include="Mesh.h">
       <Filter>includes</Filter>
     </ClInclude>
-    <ClInclude Include="Model.h">
+    <ClInclude Include="Scene.h">
       <Filter>includes</Filter>
     </ClInclude>
     <ClInclude Include="Vec3.h">
@@ -180,7 +180,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="Model.cpp">
+    <CudaCompile Include="Scene.cpp">
       <Filter>sources</Filter>
     </CudaCompile>
     <CudaCompile Include="sort.cu">

@@ -1,4 +1,4 @@
-#include "Model.h"
+#include "Scene.h"
 #include <iostream>
 #include "File.h"
 #include <limits>
@@ -18,7 +18,7 @@ void printMat4(glm::mat4 m) {
     }
 }
 
-void Model::loadModel(std::string path) {
+void Scene::loadModel(std::string path) {
     Assimp::Importer import;
     const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
 
@@ -28,11 +28,11 @@ void Model::loadModel(std::string path) {
         return;
     }
     directory = path.substr(0, path.find_last_of('/'));
-
+    fileType = path.substr(path.find_last_of('.'));
     processNode(scene->mRootNode, scene, glm::mat4(1));
 }
 
-void Model::processNode(aiNode* node, const aiScene* scene, const glm::mat4 inheritedTransormation)
+void Scene::processNode(aiNode* node, const aiScene* scene, const glm::mat4 inheritedTransormation)
 {
     glm::mat4 transformation;
     memcpy(&transformation, &node->mTransformation, sizeof(glm::mat4));
@@ -53,7 +53,7 @@ void Model::processNode(aiNode* node, const aiScene* scene, const glm::mat4 inhe
     }
 }
 
-Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
+Mesh Scene::processMesh(aiMesh* mesh, const aiScene* scene)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -108,69 +108,132 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     if (mesh->mMaterialIndex >= 0)
     {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-
-        std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
-        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-        std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
-        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-        std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
-        textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+        processMaterial(material, mesh->mMaterialIndex);
     }
     //process AABB
     auto min = mesh->mAABB.mMin;
     auto max = mesh->mAABB.mMax;
     AABB aabb = AABB(Vec3(min.x, min.y, min.z), Vec3(max.x,max.y,max.z));
-    return Mesh(vertices, indices, textures, aabb);
+    return Mesh(vertices, indices, aabb, mesh->mMaterialIndex);
 }
 
-std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
+void Scene::processMaterial(aiMaterial* aiMat, uint index) {
+    for (int i = 0; i < materials.size(); i++)
+        if (materials[i].index == index)
+            return;
+    MultiMaterial material = MultiMaterial(index);
+    material.name = std::string(aiMat->GetName().C_Str());
+    aiMat->Get(AI_MATKEY_BLEND_FUNC, material.blendMode);
+    aiMat->Get(AI_MATKEY_OPACITY, material.opacity);
+    aiMat->Get(AI_MATKEY_SHININESS, material.shininess);
+    aiMat->Get(AI_MATKEY_SHININESS_STRENGTH, material.shininessStrength);
+    aiMat->Get(AI_MATKEY_REFRACTI, material.refractionIndex);
+    loadMaterialTextures(aiMat, material);
+    materials.push_back(material);
+}
+
+void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial& material)
 {
-    std::vector<Texture> textures;
-    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
-    {
-        aiString str;
-        mat->GetTexture(type, i, &str);
-        bool skip = false;
-        for (unsigned int j = 0; j < textures_loaded.size(); j++)
+    for (int t = 0; t < textureTypeCount; t++) {
+        aiColor3D col;
+        aiTextureType type;
+        switch (t) {
+        case textureTypeDiffuse:
+            type = aiTextureType_DIFFUSE;
+            aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, col);
+            break;
+        case textureTypeNormal:
+            if (std::strcmp(fileType.c_str(), ".obj"))
+                type = aiTextureType_HEIGHT;
+            else
+                type = aiTextureType_DIFFUSE;
+            break;
+        case textureTypeSpecular:
+            type = aiTextureType_SPECULAR;
+            aiMat->Get(AI_MATKEY_COLOR_SPECULAR, col);
+            break;
+        }
+
+        TextureStack& stack = material.textures[t];
+        stack.baseColor = Vec3(col.r, col.g, col.b);
+        for (uint i = 0; i < aiMat->GetTextureCount(type); i++)
         {
-            if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+            float blend = 0.0f;
+            aiMat->Get(AI_MATKEY_TEXBLEND(type, stack.texIndices.size()), blend);
+            stack.texBlend.push_back(blend);
+
+            aiString str;
+            aiMat->GetTexture(type, i, &str);
+            bool skip = false;
+            for (uint j = 0; j < textures_loaded.size(); j++)
             {
-                textures.push_back(textures_loaded[j]);
-                skip = true;
-                break;
+                if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+                {
+                    stack.texIndices.push_back(j);
+                    skip = true;
+                    break;
+                }
+            }
+            if (!skip)
+            {   // if texture hasn't been loaded already, load it
+                Texture texture;
+                char path[256];
+                strcpy(path, directory.c_str());
+                strcat(path, "/");
+                strcat(path, str.C_Str());
+                std::cout << "loading texture: " << path << std::endl;
+                texture.id = load_texture(path, flipTextures);
+                texture.path = str.C_Str();
+                stack.texIndices.push_back(textures_loaded.size());
+                textures_loaded.push_back(texture); // add to loaded textures
             }
         }
-        if (!skip)
-        {   // if texture hasn't been loaded already, load it
-            Texture texture;
-            char path[256];
-            strcpy(path, directory.c_str());
-            strcat(path, "/");
-            strcat(path, str.C_Str());
-            std::cout << "loading " << typeName << " texture: " << path << std::endl;
-            texture.id = load_texture(path, flipTextures);
-            texture.type = typeName;
-            texture.path = str.C_Str();
-            textures.push_back(texture);
-            textures_loaded.push_back(texture); // add to loaded textures
-        }
     }
-    return textures;
 }
-void Model::render(Shader& shader, bool points)
+void Scene::render(Shader& shader, bool points)
 {
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position);
     transform = glm::rotate(transform, angle, rotationAxis);
     transform = glm::scale(transform, scale);
-    for (unsigned int i = 0; i < meshes.size(); i++)
+    
+    for (uint i = 0; i < meshes.size(); i++)
     {
+        const Mesh& mesh = meshes[i];
         shader.setMat4("model", transform * transformations[i]);
-        meshes[i].render(shader, points);
+        const MultiMaterial& mat = materials.size() > 0 ? materials[mesh.materialIndex-1] : DEFAULT_MATERIAL;
+        uint activeTexture = 0;
+        for (uint j = 0; j < textureTypeCount; j++) {
+            std::string type;
+            switch (j) {
+            case textureTypeDiffuse:
+                type = "diffuse";
+                break;
+            case textureTypeSpecular:
+                type = "specular";
+                break;
+            case textureTypeNormal:
+                type = "normal";
+                break;
+            default:
+                type = "diffuse";
+            }
+            const TextureStack& stack = mat.textures[j];
+            shader.setInt("material." + type + ".texCount", stack.texIndices.size());
+            shader.setVec3("material." + type + ".baseColor", stack.baseColor.toGLM());
+            for (uint t = 0; t < stack.texIndices.size(); t++) {
+                glActiveTexture(GL_TEXTURE0 + activeTexture++);
+                shader.setInt("material." + type + ".textures[" + std::to_string(t) + "]", i);
+                glBindTexture(GL_TEXTURE_2D, textures_loaded[stack.texIndices[t]].id);
+            }
+        }
+        glActiveTexture(GL_TEXTURE0);
+
+        mesh.render(shader, points);
     }
 }
 
-void Model::renderAABB(Shader& shader) {
+void Scene::renderAABB(Shader& shader) {
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position);
     transform = glm::rotate(transform, angle, rotationAxis);
@@ -182,7 +245,7 @@ void Model::renderAABB(Shader& shader) {
     }
 }
 
-Hit Model::intersect(Ray& ray) {
+Hit Scene::intersect(Ray& ray) {
     Hit result;
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position);
@@ -204,7 +267,7 @@ Hit Model::intersect(Ray& ray) {
     return result;
 }
 
-glm::mat4 Model::getModelTransformation() const {
+glm::mat4 Scene::getModelTransformation() const {
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position);
     transform = glm::rotate(transform, angle, rotationAxis);
@@ -213,7 +276,7 @@ glm::mat4 Model::getModelTransformation() const {
 }
 
 
-void Model::loadToDevice() {
+void Scene::loadToDevice() {
     using std::chrono::high_resolution_clock;
     using std::chrono::duration_cast;
     using std::chrono::duration;

@@ -3,13 +3,13 @@
 #include <glm/gtx/matrix_cross_product.hpp>
 #include "raytracing.h"
 
-Camera::Camera(const Model& scene) {
-	renderer[CAMERA_RENDERER_RASTERIZER] = new Rasterizer(scene);
-	renderer[CAMERA_RENDERER_RAYTRACER] = new RayTracer(scene);
+Camera::Camera(const Scene& scene) {
+	renderer[renderTypeRasterize] = new Rasterizer(scene);
+	renderer[renderTypeRayTrace] = new RayTracer(scene);
 }
 
 Camera::~Camera() {
-	for (int i = 0; i < CAMERA_RENDERER_COUNT; i++)
+	for (int i = 0; i < renderTypeCount; i++)
 		delete renderer[i];
 }
 
@@ -30,11 +30,11 @@ void Camera::update() {
 	right = glm::normalize(glm::cross(worldUp, direction));
 	up = glm::cross(direction, right);
 
-	for (int i = 0; i < CAMERA_RENDERER_COUNT; i++)
+	for (int i = 0; i < renderTypeCount; i++)
 		renderer[i]->setViewVectors(position, direction, right, up);
 }
 void Camera::resize(const int& width, const int& height) {
-	for (int i = 0; i < CAMERA_RENDERER_COUNT; i++)
+	for (int i = 0; i < renderTypeCount; i++)
 		renderer[i]->resize(width, height, fov, nearPlane, farPlane);
 }
 uint Camera::render() {

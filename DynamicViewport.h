@@ -3,11 +3,11 @@
 #include "Camera.h"
 #include "Shader.h"
 #include <cstdbool>
-#include "Model.h"
+#include "Scene.h"
 #include "Ray.h"
 
 struct ViewportSettings {
-	uint renderer = CAMERA_RENDERER_RASTERIZER;
+	uint renderer = renderTypeRasterize;
 };
 
 
@@ -16,7 +16,7 @@ class DynamicViewport
 private:
 	Camera *camera;
 	ImVec2 size;
-	Model scene;
+	Scene scene;
 	void updateFramebuffer();
 	void handleUserInput(float deltaTime);
 	float mouseSensitivity = 0.1f;
@@ -26,7 +26,7 @@ private:
 public:	
 	ViewportSettings settings;
 	void updateSettings() {
-		camera->setRenderer(settings.renderer);
+		camera->setRenderer((RenderType)settings.renderer);
 	}
 	DynamicViewport();
 	~DynamicViewport();

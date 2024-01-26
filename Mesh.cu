@@ -8,11 +8,11 @@
 
 #define BLOCK_SIZE 256
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, AABB aabb) {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, uint materialIndex) {
     this->vertices = vertices;
     this->indices = indices;
-    this->textures = textures;
     this->aabb = aabb;
+    this->materialIndex = materialIndex;
     calcAABB();
     setupMesh();
 }
@@ -77,43 +77,7 @@ void Mesh::setupMesh() {
     glBindVertexArray(0);
 }
 
-void Mesh::render(Shader& shader, bool points) {
-    unsigned int diffuseNr = 1;
-    unsigned int specularNr = 1;
-    unsigned int normalNr = 1;
-
-    shader.setBool("material.sampleDiffuse", false);
-    shader.setBool("material.sampleSpecular", false);
-    shader.setBool("material.sampleNormal", false);
-
-    for (unsigned int i = 0; i < textures.size(); i++)
-    {
-        glActiveTexture(GL_TEXTURE0 + i); // activate proper texture unit before binding
-        // retrieve texture number (the N in diffuse_textureN)
-        std::string number;
-        std::string name = textures[i].type;
-        if (name == "texture_diffuse")
-        {
-            number = std::to_string(diffuseNr++);
-            shader.setBool("material.sampleDiffuse", true);
-
-        }
-        else if (name == "texture_specular")
-        {
-            number = std::to_string(specularNr++);
-            shader.setBool("material.sampleSpecular", true);
-        }
-        else if (name == "texture_normal")
-        {
-            number = std::to_string(normalNr++);
-            shader.setBool("material.sampleNormal", true);
-        }
-
-        shader.setInt(("material." + name + number).c_str(), i);
-        glBindTexture(GL_TEXTURE_2D, textures[i].id);
-    }
-    glActiveTexture(GL_TEXTURE0);
-
+void Mesh::render(Shader& shader, bool points) const {
     // draw mesh
     glBindVertexArray(VAO);
     if (points)
@@ -330,6 +294,7 @@ __device__ bool Triangle::hit(const Ray& r, float tmin, float tmax, HitRecord& r
         rec.t = t;
         rec.p = r.at(t);
         rec.set_face_normal(r, (1 - u - v) * vertices[indexA].Normal + u * vertices[indexB].Normal + v * vertices[indexC].Normal);
+        //rec.set_face_normal(r, vertices[indexA].Normal);
         rec.mat = mat;
         return true;
     }

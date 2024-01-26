@@ -70,8 +70,8 @@ void App::renderUI(ImGuiIO& io) {
 	ImGui::InputInt("Max Steps", &(rt_viewport->max_steps), 1);*/
 
 	if (ImGui::InputInt("Renderer", (int*)&(viewport->settings.renderer))) {
-		if (viewport->settings.renderer > CAMERA_RENDERER_COUNT - 1)
-			viewport->settings.renderer = CAMERA_RENDERER_COUNT - 1;
+		if (viewport->settings.renderer > renderTypeCount - 1)
+			viewport->settings.renderer = renderTypeCount - 1;
 		if (viewport->settings.renderer < 0)
 			viewport->settings.renderer = 0;
 		viewport->updateSettings();

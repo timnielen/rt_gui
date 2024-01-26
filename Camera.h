@@ -2,7 +2,7 @@
 #include <GL/gl3w.h>
 #include <glm/glm.hpp>
 #include "Shader.h"
-#include "Model.h"
+#include "Scene.h"
 #include "GlobalTypes.h"
 #include "File.h"
 #include "GraphicsResource.h"
@@ -10,10 +10,7 @@
 #include "cuda_helper.h"
 #include <curand_kernel.h>
 
-#define CAMERA_RENDERER_COUNT 2
-#define CAMERA_RENDERER_RASTERIZER 0
-#define CAMERA_RENDERER_RAYTRACER 1
-
+enum RenderType { renderTypeRasterize, renderTypeRayTrace, renderTypeCount};
 
 class Renderer {
 protected:
@@ -40,12 +37,17 @@ public:
 class Camera
 {
 private:
-	Renderer* renderer[CAMERA_RENDERER_COUNT];
-	uint activeRenderer = CAMERA_RENDERER_RASTERIZER;
+	Renderer* renderer[renderTypeCount];
+	RenderType activeRenderer = renderTypeRasterize;
 public:
-	Camera(const Model& scene);
+	Camera(const Scene& scene);
 	~Camera();
-	void setRenderer(uint renderer) {
+	void setRenderer(RenderType renderer) {
+		if(renderer >= renderTypeCount)
+		{
+			std::cerr << "invalid renderer type" << std::endl;
+			return;
+		}
 		activeRenderer = renderer;
 	}
 	glm::vec3 position = glm::vec3(0);
@@ -69,7 +71,7 @@ public:
 
 class Rasterizer : public Renderer {
 public:
-	Rasterizer(const Model& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
+	Rasterizer(const Scene& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 	}
@@ -77,7 +79,7 @@ public:
 	void resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) override;
 	uint render() override;
 private:
-	Model scene;
+	Scene scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
 	glm::vec4 clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
@@ -91,7 +93,7 @@ private:
 
 class RayTracer : public Renderer {
 public:
-	RayTracer(const Model& scene) {
+	RayTracer(const Scene& scene) {
 		this->scene = scene.hitable;
 		environment.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
 	}

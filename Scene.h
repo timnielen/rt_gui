@@ -7,12 +7,12 @@
 #include "Ray.h"
 #include "Hit.h"
 
-class Model
+class Scene
 {
 public:
     bool flipTextures;
-    Model() {}
-    Model(const char* path, bool flipTextures = true) : flipTextures(flipTextures)
+    Scene() {}
+    Scene(const char* path, bool flipTextures = true) : flipTextures(flipTextures)
     {
         loadModel(path);
         loadToDevice();
@@ -33,14 +33,15 @@ private:
     // model data
     std::vector<Mesh> meshes;
     std::vector<glm::mat4> transformations;
-    std::string directory; 
+    std::string directory, fileType; 
     std::vector<Texture> textures_loaded;
+    std::vector<MultiMaterial> materials;
     void loadModel(std::string path);
     void processNode(aiNode* node, const aiScene* scene, glm::mat4 inheritedTransformation);
     Mesh processMesh(aiMesh* mesh, const aiScene* scene);
-    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
+    void processMaterial(aiMaterial* mat, uint index); 
+    void loadMaterialTextures(aiMaterial* aiMat, MultiMaterial& material);
     void loadToDevice();
-
 };
 
 

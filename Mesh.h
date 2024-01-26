@@ -4,7 +4,7 @@
 #include "Shader.h"
 #include "Ray.h"
 #include "Hit.h"
-
+#include "Material.h"
 
 struct BBox {
     glm::vec3 min;
@@ -22,7 +22,6 @@ struct Vertex {
 
 struct Texture {
     unsigned int id;
-    std::string type;
     std::string path;
 };
 
@@ -31,12 +30,12 @@ public:
     // mesh data
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
-    std::vector<Texture>      textures;
+    uint materialIndex;
     AABB aabb;
     unsigned int aabbVAO;
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, AABB aabb);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, uint materialIndex);
     void renderAABB(Shader& shader);
-    void render(Shader& shader, bool points = false);
+    void render(Shader& shader, bool points = false) const;
     Hit intersect(Ray& r, glm::mat4 transform = glm::mat4(1));
     unsigned int VAO, VBO, EBO;
 

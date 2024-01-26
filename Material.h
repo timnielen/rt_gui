@@ -2,12 +2,15 @@
 #include "cuda_runtime.h"
 #include <curand_kernel.h>
 #include "device_launch_parameters.h"
+#include <assimp/material.h>
 
 struct HitRecord;
 
 #include "Hit.h"
 #include "Ray.h"
 #include "Vec3.h"
+#include "GlobalTypes.h"
+#include <vector>
 
 
 __device__ inline Vec3 random_in_unit_sphere(curandState* local_rand_state) {
@@ -118,3 +121,30 @@ private:
 		return r0 + (1 - r0) * powf((1 - cosine), 5);
 	}
 };
+
+enum TextureType { textureTypeDiffuse = 0, textureTypeSpecular, textureTypeNormal, textureTypeCount};
+
+struct TextureStack {
+	Vec3 baseColor;
+	std::vector<uint> texIndices;
+	std::vector<float> texBlend;
+};
+
+class MultiMaterial {
+public:
+	MultiMaterial() : index(-1) {
+		textures[textureTypeDiffuse].baseColor = Vec3(1.0f, 0.1f, 0.5f);
+		textures[textureTypeSpecular].baseColor = Vec3(0.1f);
+	}
+	MultiMaterial(int index) : index(index) {}
+	std::string name = "Default Material";
+	int index;
+	aiBlendMode blendMode = aiBlendMode_Default;
+	float opacity = 1.0f;
+	float shininess = 32.0f;
+	float shininessStrength = 1.0f;
+	float refractionIndex = 0.0f;
+	TextureStack textures[textureTypeCount];
+};
+
+const MultiMaterial DEFAULT_MATERIAL;

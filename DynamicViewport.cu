@@ -7,9 +7,11 @@
 
 
 DynamicViewport::DynamicViewport() : size({ -1,-1 }) {
-	scene = Model("assets/bunny.obj");
+	//scene = Scene("assets/ship/source/full_scene.fbx");
+	scene = Scene("assets/monkey.obj");
 	camera = new Camera(scene);
 	camera->setPosition(glm::vec3(0, 0, 3));
+	std::cout << "test\n";
 }
 
 DynamicViewport::~DynamicViewport() {

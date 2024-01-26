@@ -1,4 +1,4 @@
 #pragma once
 
-#define uint unsigned int
+typedef unsigned int uint;
 
