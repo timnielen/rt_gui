@@ -39,7 +39,22 @@ App::App() {
 	viewport = new DynamicViewport();
 	//glfwSwapInterval(0);
 }
-	
+
+void App::showTextureStack(MultiMaterial& mat, const char* name, TextureType type) {
+	if (ImGui::TreeNode(name))
+	{
+		TextureStack& stack = mat.textures[type];
+		if (stack.texCount == 0)
+			ImGui::InputFloat3("Base Color", &(stack.baseColor.x));
+		else for (int j = 0; j < stack.texCount; j++)
+		{
+			ImGui::Text("+");
+			ImGui::InputFloat("factor", &stack.texBlend[j]);
+			ImGui::Image((void*)viewport->scene.textures_loaded[stack.texIndices[j]].id, ImVec2(200, 200), { 0, 1 }, { 1, 0 });
+		}
+		ImGui::TreePop();
+	}
+}
 
 void App::renderUI(ImGuiIO& io) {
 	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
@@ -83,8 +98,12 @@ void App::renderUI(ImGuiIO& io) {
 			{
 				ImGui::Text("Opacity %.2f", mat.opacity);
 				ImGui::Text("Refraction Index %.2f", mat.refractionIndex);
-				ImGui::Text("Shininess %.2f", mat.shininess);
+				ImGui::InputFloat("Shininess", &mat.shininess);
 				ImGui::Text("Shininess Strength %.2f", mat.shininessStrength);
+				
+				showTextureStack(mat, "Diffuse", textureTypeDiffuse);
+				showTextureStack(mat, "Specular", textureTypeSpecular);
+				showTextureStack(mat, "Normal", textureTypeNormal);
 				ImGui::TreePop();
 			}
 		}

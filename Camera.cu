@@ -3,7 +3,7 @@
 #include <glm/gtx/matrix_cross_product.hpp>
 #include "raytracing.h"
 
-Camera::Camera(const Scene& scene) {
+Camera::Camera(Scene& scene) {
 	renderer[renderTypeRasterize] = new Rasterizer(scene);
 	renderer[renderTypeRayTrace] = new RayTracer(scene);
 }

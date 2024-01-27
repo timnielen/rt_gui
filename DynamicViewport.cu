@@ -8,7 +8,7 @@
 
 DynamicViewport::DynamicViewport() : size({ -1,-1 }) {
 	//scene = Scene("assets/ship/source/full_scene.fbx");
-	scene = Scene("assets/monkey.obj");
+	scene = Scene("assets/Survival_BackPack_2/backpack.obj");
 	camera = new Camera(scene);
 	camera->setPosition(glm::vec3(0, 0, 3));
 	std::cout << "test\n";

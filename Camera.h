@@ -40,7 +40,7 @@ private:
 	Renderer* renderer[renderTypeCount];
 	RenderType activeRenderer = renderTypeRasterize;
 public:
-	Camera(const Scene& scene);
+	Camera(Scene& scene);
 	~Camera();
 	void setRenderer(RenderType renderer) {
 		if(renderer >= renderTypeCount)
@@ -71,7 +71,7 @@ public:
 
 class Rasterizer : public Renderer {
 public:
-	Rasterizer(const Scene& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
+	Rasterizer(Scene& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 	}
@@ -79,7 +79,7 @@ public:
 	void resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) override;
 	uint render() override;
 private:
-	Scene scene;
+	Scene& scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
 	glm::vec4 clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);

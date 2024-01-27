@@ -126,8 +126,9 @@ enum TextureType { textureTypeDiffuse = 0, textureTypeSpecular, textureTypeNorma
 
 struct TextureStack {
 	Vec3 baseColor;
-	std::vector<uint> texIndices;
-	std::vector<float> texBlend;
+	uint texCount;
+	uint* texIndices;
+	float* texBlend;
 };
 
 class MultiMaterial {

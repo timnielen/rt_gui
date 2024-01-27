@@ -48,9 +48,10 @@ uniform PointLight pLight;
 uniform DirLight dLight;
 
 vec3 evaluateTextureStack(TextureStack stack) {
-    vec3 color = stack.baseColor;
+    if(stack.texCount == 0) return stack.baseColor;
+    vec3 color = vec3(0); 
     for (int i = 0; i < stack.texCount; i++)
-        color += stack.texBlend[i] * texture(stack.textures[i], TexCoords).rgb;
+        color += stack.texBlend[i] * texture(stack.textures[i], TexCoords).rgb; 
     return color;
 }
 
@@ -81,7 +82,7 @@ vec4 strengthDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     
     
-    vec4 ambient = vec4(light.ambient * evaluateTextureStack(material.diffuse),1);
+    vec4 ambient = vec4(light.ambient * evaluateTextureStack(material.diffuse), 1);
     vec4 diffuse = vec4(light.diffuse * diff * evaluateTextureStack(material.diffuse),1);
     vec4 specular = vec4(light.specular * spec * evaluateTextureStack(material.specular),1);
     return ambient + diffuse + specular;

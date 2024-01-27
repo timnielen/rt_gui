@@ -13,7 +13,6 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB
     this->indices = indices;
     this->aabb = aabb;
     this->materialIndex = materialIndex;
-    calcAABB();
     setupMesh();
 }
 
@@ -29,7 +28,6 @@ void Mesh::calcAABB() {
         aabb.min.y = min(vertices[i].Position.y, aabb.min.y);
         aabb.min.z = min(vertices[i].Position.z, aabb.min.z);
     }
-    std::cout << sizeof(BBox) << std::endl;
 
 
     glGenVertexArrays(1, &aabbVAO);

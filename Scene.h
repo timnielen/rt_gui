@@ -28,6 +28,7 @@ public:
     std::vector<glm::mat4> getMeshTransformations() const { return transformations; }
     glm::mat4 getModelTransformation() const;
     std::vector<MultiMaterial> materials;
+    std::vector<Texture> textures_loaded;
 
     Hitable** hitable;
 private:
@@ -35,7 +36,6 @@ private:
     std::vector<Mesh> meshes;
     std::vector<glm::mat4> transformations;
     std::string directory, fileType; 
-    std::vector<Texture> textures_loaded;
     void loadModel(std::string path);
     void processNode(aiNode* node, const aiScene* scene, glm::mat4 inheritedTransformation);
     Mesh processMesh(aiMesh* mesh, const aiScene* scene);
