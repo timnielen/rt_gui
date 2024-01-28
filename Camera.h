@@ -6,7 +6,6 @@
 #include "GlobalTypes.h"
 #include "File.h"
 #include "GraphicsResource.h"
-#include "GlobalTypes.h"
 #include "cuda_helper.h"
 #include <curand_kernel.h>
 

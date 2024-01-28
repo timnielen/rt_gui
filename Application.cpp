@@ -40,17 +40,14 @@ App::App() {
 	//glfwSwapInterval(0);
 }
 
-void App::showTextureStack(MultiMaterial& mat, const char* name, TextureType type) {
+void App::showTextureStack(MultiMaterial* mat, const char* name, TextureType type) {
 	if (ImGui::TreeNode(name))
 	{
-		TextureStack& stack = mat.textures[type];
-		if (stack.texCount == 0)
-			ImGui::InputFloat3("Base Color", &(stack.baseColor.x));
-		else for (int j = 0; j < stack.texCount; j++)
+		if (mat->textures[type] == -1)
+			ImGui::InputFloat3("Base Color", &(mat->colors[type].x));
+		else
 		{
-			ImGui::Text("+");
-			ImGui::InputFloat("factor", &stack.texBlend[j]);
-			ImGui::Image((void*)viewport->scene.textures_loaded[stack.texIndices[j]].id, ImVec2(200, 200), { 0, 1 }, { 1, 0 });
+			ImGui::Image((void*)mat->textures[type], ImVec2(200, 200), {0, 1}, {1, 0});
 		}
 		ImGui::TreePop();
 	}
@@ -117,13 +114,13 @@ void App::renderUI(ImGuiIO& io) {
 			if (i == 0)
 				ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-			MultiMaterial& mat = viewport->scene.materials[i];
-			if (ImGui::TreeNode((void*)(intptr_t)i, mat.name.c_str(), i))
+			MultiMaterial* mat = viewport->scene.materials[i];
+			if (ImGui::TreeNode((void*)(intptr_t)i, mat->name, i))
 			{
-				ImGui::Text("Opacity %.2f", mat.opacity);
-				ImGui::Text("Refraction Index %.2f", mat.refractionIndex);
-				ImGui::InputFloat("Shininess", &mat.shininess);
-				ImGui::Text("Shininess Strength %.2f", mat.shininessStrength);
+				ImGui::Text("Opacity %.2f", mat->opacity);
+				ImGui::Text("Refraction Index %.2f", mat->refractionIndex);
+				ImGui::InputFloat("Shininess", &mat->shininess);
+				ImGui::Text("Shininess Strength %.2f", mat->shininessStrength);
 				
 				showTextureStack(mat, "Diffuse", textureTypeDiffuse);
 				showTextureStack(mat, "Specular", textureTypeSpecular);

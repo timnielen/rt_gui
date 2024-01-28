@@ -30,10 +30,10 @@ public:
     // mesh data
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
-    uint materialIndex;
+    MultiMaterial* material = nullptr;
     AABB aabb;
     unsigned int aabbVAO;
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, uint materialIndex);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, MultiMaterial* material);
     void renderAABB(Shader& shader);
     void render(Shader& shader, bool points = false) const;
     Hit intersect(Ray& r, glm::mat4 transform = glm::mat4(1));

@@ -156,6 +156,7 @@
     <CudaCompile Include="BVH.cu" />
     <CudaCompile Include="Camera.cu" />
     <CudaCompile Include="DynamicViewport.cu" />
+    <CudaCompile Include="Material.cu" />
     <CudaCompile Include="Mesh.cu" />
     <CudaCompile Include="Scene.cpp" />
     <CudaCompile Include="sort.cu" />

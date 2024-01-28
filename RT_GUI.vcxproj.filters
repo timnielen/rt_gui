@@ -198,5 +198,8 @@
     <CudaCompile Include="Mesh.cu">
       <Filter>sources</Filter>
     </CudaCompile>
+    <CudaCompile Include="Material.cu">
+      <Filter>sources</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

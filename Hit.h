@@ -12,6 +12,7 @@ public:
 	float t;
 	bool front_face;
 	Material* mat;
+	glm::vec2 uvCoords = { 0.0f, 0.0f };
 
 	__device__ __host__ void set_face_normal(const Ray& r, const Vec3& outward_normal, const Vec3& faceNormal) {
 		// Sets the hit record normal vector.

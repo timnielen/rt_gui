@@ -8,12 +8,12 @@
 
 #define BLOCK_SIZE 256
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, uint materialIndex) {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, MultiMaterial* material) {
     std::cout << "Vert count: " << vertices.size() << std::endl;
     this->vertices = vertices;
     this->indices = indices;
     this->aabb = aabb;
-    this->materialIndex = materialIndex;
+    this->material = material;
     setupMesh();
 }
 
@@ -77,6 +77,32 @@ void Mesh::setupMesh() {
 }
 
 void Mesh::render(Shader& shader, bool points) const {
+    const MultiMaterial* material = this->material == nullptr ? &DEFAULT_MATERIAL : this->material;
+    shader.setFloat("material.shininess", material->shininess);
+    uint activeTexture = 0;
+    for (uint j = 0; j < textureTypeCount; j++) {
+        std::string type;
+        switch (j) {
+        case textureTypeDiffuse:
+            type = "diffuse";
+            break;
+        case textureTypeSpecular:
+            type = "specular";
+            break;
+        case textureTypeNormal:
+            type = "normal";
+            break;
+        default:
+            type = "diffuse";
+        }
+        shader.setBool("material." + type + ".useTex", material->textures[j] != -1);
+        shader.setVec3("material." + type + ".baseColor", material->colors[j].toGLM());
+        if (material->textures[j] == -1) continue;
+        glActiveTexture(GL_TEXTURE0 + activeTexture);
+        shader.setInt("material." + type + ".tex", activeTexture++);
+        glBindTexture(GL_TEXTURE_2D, material->textures[j]);
+    }
+    glActiveTexture(GL_TEXTURE0);
     // draw mesh
     glBindVertexArray(VAO);
     if (points)
@@ -93,11 +119,14 @@ void Mesh::renderAABB(Shader& shader) {
     glBindVertexArray(0);
 }
 
-__global__ void loadMaterial(Material** mat) {
+__global__ void loadMaterial(Material** mat, MultiMaterial* multiMat) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index != 0) return;
     //*mat = new Dielectric(1.5f);
-    *mat = new Lambertian(Vec3(1.0f));
+    //*mat = new Lambertian(Vec3(1.0f));
+    MultiMaterial* newMat = new MultiMaterial();
+    *newMat = *multiMat;
+    *mat = newMat;
 }
 
 __global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Vertex* vertices, Material** mat) {
@@ -129,6 +158,7 @@ __global__ void combineHitables(Hitable** output, Hitable** hlist, int count) {
 }
 
 void Mesh::loadToDevice(Hitable** output) {
+
     cudaGraphicsGLRegisterBuffer(&cudaVBO, VBO, cudaGraphicsRegisterFlagsReadOnly);
     cudaGraphicsGLRegisterBuffer(&cudaEBO, EBO, cudaGraphicsRegisterFlagsReadOnly);
 
@@ -144,7 +174,7 @@ void Mesh::loadToDevice(Hitable** output) {
 
     cudaMalloc((void**)&triangles, countTriangles * sizeof(Hitable*));
     cudaMalloc((void**)&mat, sizeof(Material*));
-    loadMaterial << <1, 1 >> > (mat);
+    loadMaterial << <1, 1 >> > (mat, material);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
@@ -293,11 +323,17 @@ __device__ bool Triangle::hit(const Ray& r, float tmin, float tmax, HitRecord& r
     {
         rec.t = t;
         rec.p = r.at(t);
-        //rec.set_face_normal(r, (1 - u - v) * vertices[indexA].Normal + u * vertices[indexB].Normal + v * vertices[indexC].Normal);
+        float w = (1 - u - v);
+        glm::vec2 tA = vertices[indexA].TexCoords;
+        glm::vec2 tB = vertices[indexB].TexCoords;
+        glm::vec2 tC = vertices[indexC].TexCoords;
+        rec.uvCoords.x = w * tA.x + u * tB.x + v * tC.x;
+        rec.uvCoords.y = w * tA.y + u * tB.y + v * tC.y;
+
         Vec3 nA = vertices[indexA].Normal;
         Vec3 nB = vertices[indexB].Normal;
         Vec3 nC = vertices[indexC].Normal;
-        rec.set_face_normal(r, d_normalize((1 - u - v) * nA + u * nB + v * nC), d_normalize(cross(edge1, edge2)));
+        rec.set_face_normal(r, d_normalize(w * nA + u * nB + v * nC), d_normalize(cross(edge1, edge2)));
         rec.mat = mat;
 
         return true;

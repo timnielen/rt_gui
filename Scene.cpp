@@ -105,34 +105,39 @@ Mesh Scene::processMesh(aiMesh* mesh, const aiScene* scene)
             indices.push_back(face.mIndices[j]);
     }
     // process material
+    MultiMaterial* material = nullptr;
     if (mesh->mMaterialIndex >= 0)
     {
-        aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        processMaterial(material, mesh->mMaterialIndex);
+        aiMaterial* aiMat = scene->mMaterials[mesh->mMaterialIndex];
+        material = processMaterial(aiMat, mesh->mMaterialIndex);
     }
     //process AABB
     auto min = mesh->mAABB.mMin;
     auto max = mesh->mAABB.mMax;
     AABB aabb = AABB(Vec3(min.x, min.y, min.z), Vec3(max.x,max.y,max.z));
-    return Mesh(vertices, indices, aabb, mesh->mMaterialIndex);
+    return Mesh(vertices, indices, aabb, material);
 }
 
-void Scene::processMaterial(aiMaterial* aiMat, uint index) {
+MultiMaterial* Scene::processMaterial(aiMaterial* aiMat, uint index) {
     for (int i = 0; i < materials.size(); i++)
-        if (materials[i].index == index)
-            return;
-    MultiMaterial material = MultiMaterial(index);
-    material.name = std::string(aiMat->GetName().C_Str());
-    aiMat->Get(AI_MATKEY_BLEND_FUNC, material.blendMode);
-    aiMat->Get(AI_MATKEY_OPACITY, material.opacity);
-    aiMat->Get(AI_MATKEY_SHININESS, material.shininess);
-    aiMat->Get(AI_MATKEY_SHININESS_STRENGTH, material.shininessStrength);
-    aiMat->Get(AI_MATKEY_REFRACTI, material.refractionIndex);
+        if (materials[i]->index == index)
+            return materials[i];
+
+    MultiMaterial* material;
+    cudaMallocManaged((void**)&material, sizeof(MultiMaterial));
+    *material = MultiMaterial(index);
+    strcpy(material->name, aiMat->GetName().C_Str());
+    aiMat->Get(AI_MATKEY_BLEND_FUNC, material->blendMode);
+    aiMat->Get(AI_MATKEY_OPACITY, material->opacity);
+    aiMat->Get(AI_MATKEY_SHININESS, material->shininess);
+    aiMat->Get(AI_MATKEY_SHININESS_STRENGTH, material->shininessStrength);
+    aiMat->Get(AI_MATKEY_REFRACTI, material->refractionIndex);
     loadMaterialTextures(aiMat, material);
     materials.push_back(material);
+    return material;
 }
 
-void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial& material)
+void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial* material)
 {
     for (int t = 0; t < textureTypeCount; t++) {
         aiColor3D col;
@@ -154,43 +159,42 @@ void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial& material)
             break;
         }
 
-        TextureStack& stack = material.textures[t];
-        stack.baseColor = Vec3(col.r, col.g, col.b);
-        stack.texCount = aiMat->GetTextureCount(type);
-        stack.texBlend = new float[stack.texCount];
-        stack.texIndices = new uint[stack.texCount];
-        for (uint i = 0; i < stack.texCount; i++)
-        {
-            float blend = 1.0f;
-            aiMat->Get(AI_MATKEY_TEXBLEND(type, i), blend);
-            stack.texBlend[i] = blend;
+        material->colors[t] = Vec3(col.r, col.g, col.b);
+        int textureCount = aiMat->GetTextureCount(type);
+        if (textureCount <= 0)
+            continue;
 
-            aiString str;
-            aiMat->GetTexture(type, i, &str);
-            bool skip = false;
-            for (uint j = 0; j < textures_loaded.size(); j++)
+        // We assume only one texture per type
+        aiString str;
+        aiMat->GetTexture(type, 0, &str);
+        bool skip = false;
+        for (uint j = 0; j < textures_loaded.size(); j++)
+        {
+            if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
             {
-                if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
-                {
-                    stack.texIndices[i] = j;
-                    skip = true;
-                    break;
-                }
-            }
-            if (!skip)
-            {   // if texture hasn't been loaded already, load it
-                Texture texture;
-                char path[256];
-                strcpy(path, directory.c_str());
-                strcat(path, "/");
-                strcat(path, str.C_Str());
-                std::cout << "loading texture: " << path << std::endl;
-                texture.id = load_texture(path, flipTextures);
-                texture.path = str.C_Str();
-                stack.texIndices[i] = textures_loaded.size();
-                textures_loaded.push_back(texture); // add to loaded textures
+                material->textures[t] = textures_loaded[j].id;
+                skip = true;
+                break;
             }
         }
+        if (!skip)
+        {   // if texture hasn't been loaded already, load it
+            Texture newTexture;
+            char path[256];
+            strcpy(path, directory.c_str());
+            strcat(path, "/");
+            strcat(path, str.C_Str());
+            std::cout << "loading texture: " << path << std::endl;
+            newTexture.id = load_texture(path, flipTextures);
+            std::cout << newTexture.id << std::endl;
+            newTexture.path = str.C_Str();
+            material->textures[t] = newTexture.id;
+            std::cout << material->textures[t] << std::endl;
+            textures_loaded.push_back(newTexture); // add to loaded textures
+        }
+
+        material->cudaTextures[t].init(material->textures[t]);
+        material->cudaTextures[t].map();
     }
 }
 void Scene::render(Shader& shader, bool points)
@@ -204,37 +208,6 @@ void Scene::render(Shader& shader, bool points)
     {
         const Mesh& mesh = meshes[i];
         shader.setMat4("model", transform * transformations[i]);
-        
-        const MultiMaterial& mat = mesh.materialIndex > 0 ? materials[mesh.materialIndex-1] : DEFAULT_MATERIAL;
-        shader.setFloat("material.shininess", mat.shininess);
-        uint activeTexture = 0;
-        for (uint j = 0; j < textureTypeCount; j++) {
-            std::string type;
-            switch (j) {
-            case textureTypeDiffuse:
-                type = "diffuse";
-                break;
-            case textureTypeSpecular:
-                type = "specular";
-                break;
-            case textureTypeNormal:
-                type = "normal";
-                break;
-            default:
-                type = "diffuse";
-            }
-            TextureStack stack = mat.textures[j];
-            shader.setInt("material." + type + ".texCount", stack.texCount);
-            shader.setVec3("material." + type + ".baseColor", stack.baseColor.toGLM());
-            for (uint t = 0; t < stack.texCount; t++) {
-                glActiveTexture(GL_TEXTURE0 + activeTexture);
-                shader.setFloat("material." + type + ".texBlend[" + std::to_string(t) + "]", stack.texBlend[t]);
-                shader.setInt("material." + type + ".textures[" + std::to_string(t) + "]", activeTexture++);
-                glBindTexture(GL_TEXTURE_2D, textures_loaded[stack.texIndices[t]].id);
-            }
-        }
-        glActiveTexture(GL_TEXTURE0);
-
         mesh.render(shader, points);
     }
 }

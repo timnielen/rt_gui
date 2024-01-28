@@ -42,14 +42,13 @@ struct cudaTexture {
 	cudaGraphicsResource_t gfxRes = NULL;
 	cudaTextureObject_t texObject;
 	uint glTexture;
-	void init(uint tex) {
+	__host__ void init(uint tex) {
 		glTexture = tex;
 		if (gfxRes != NULL)
 			destroy();
-		std::cout << "texture: " << tex << std::endl;
 		checkCudaErrors(cudaGraphicsGLRegisterImage(&gfxRes, tex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsReadOnly));
 	}
-	void map() {
+	__host__ void map() {
 		if (gfxRes == NULL) std::cout << "error!!" << std::endl;
 		checkCudaErrors(cudaGraphicsMapResources(1, &gfxRes));
 
@@ -70,10 +69,10 @@ struct cudaTexture {
 		}
 		checkCudaErrors(cudaCreateTextureObject(&texObject, &viewCudaArrayResourceDesc, &texDesc, NULL));
 	}
-	void unmap() {
+	__host__ void unmap() {
 		checkCudaErrors(cudaGraphicsUnmapResources(1, &gfxRes));
 	}
-	void destroy() {
+	__host__ void destroy() {
 		std::cout << "Cuda Texture unloaded." << std::endl;
 		checkCudaErrors(cudaGraphicsUnregisterResource(gfxRes));
 		gfxRes = NULL;

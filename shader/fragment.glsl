@@ -5,9 +5,8 @@ const int MAX_TEXTURES = 1;
 
 struct TextureStack {
     vec3 baseColor;
-    sampler2D textures[MAX_TEXTURES];
-    float texBlend[MAX_TEXTURES];
-    int texCount;
+    bool useTex;
+    sampler2D tex;
 };
 
 struct Material {
@@ -48,11 +47,8 @@ uniform PointLight pLight;
 uniform DirLight dLight;
 
 vec3 evaluateTextureStack(TextureStack stack) {
-    if(stack.texCount == 0) return stack.baseColor;
-    vec3 color = vec3(0); 
-    for (int i = 0; i < stack.texCount; i++)
-        color += stack.texBlend[i] * texture(stack.textures[i], TexCoords).rgb; 
-    return color;
+    if(stack.useTex) return texture(stack.tex, TexCoords).rgb;
+    else return stack.baseColor;
 }
 
 //vec3 strengthPointLight(PointLight light, vec3 normal, vec3 viewDir) {
@@ -91,7 +87,7 @@ vec4 strengthDirLight(DirLight light, vec3 normal, vec3 viewDir) {
 void main()
 {
     vec3 normal = Normal;
-    if (material.normal.texCount > 0) {
+    if (material.normal.useTex) {
         normal = evaluateTextureStack(material.normal);
         normal = 2 * normal - 1;
         normal = normalize(TBN * normal);
