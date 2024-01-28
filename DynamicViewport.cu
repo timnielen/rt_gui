@@ -8,10 +8,10 @@
 
 DynamicViewport::DynamicViewport() : size({ -1,-1 }) {
 	//scene = Scene("assets/ship/source/full_scene.fbx");
-	scene = Scene("assets/Survival_BackPack_2/backpack.obj");
+	//scene = Scene("assets/Survival_BackPack_2/backpack.obj");
+	scene = Scene("assets/monkey.obj");
 	camera = new Camera(scene);
-	camera->setPosition(glm::vec3(0, 0, 3));
-	std::cout << "test\n";
+	camera->setPosition(glm::vec3(0, 0, camera->distance));
 }
 
 DynamicViewport::~DynamicViewport() {
@@ -80,7 +80,7 @@ void DynamicViewport::handleUserInput(float deltaTime) {
 
 		int mouseWheel = ImGui::GetIO().MouseWheel;
 		if (mouseWheel != 0) {
-			camera->distance -= mouseWheel / 2.0f;
+			camera->distance -= mouseWheel;
 			camera->update();
 		};
 	}

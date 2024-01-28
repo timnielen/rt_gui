@@ -50,6 +50,7 @@ public:
 		}
 		activeRenderer = renderer;
 	}
+	Renderer* getRenderer(RenderType type) { return renderer[type]; }
 	glm::vec3 position = glm::vec3(0);
 	glm::vec3 right = glm::vec3(1, 0, 0);
 	glm::vec3 up = glm::vec3(0, 1, 0);
@@ -72,18 +73,25 @@ public:
 class Rasterizer : public Renderer {
 public:
 	Rasterizer(Scene& scene) : scene(scene), shader("./shader/vertex.glsl", "./shader/fragment.glsl") {
+		normalsShader.setVertex("./shader/vertex.glsl");
+		normalsShader.setGeometry("./shader/Normals/normals_geometry.glsl");
+		normalsShader.setFragment("./shader/Normals/in_color_fragment.glsl");
+		normalsShader.link();
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 	}
 	void updateView() override;
 	void resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) override;
 	uint render() override;
+	bool wireframe = false;
+	bool showNormals = false;
+	float normalsLength = 0.1f;
 private:
 	Scene& scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
 	glm::vec4 clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-	Shader shader;
+	Shader shader, normalsShader;
 	uint intermediateFBO = 0;
 	uint framebuffer = 0;
 	uint screenTexture = 0;

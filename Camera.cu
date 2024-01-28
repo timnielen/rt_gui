@@ -174,7 +174,6 @@ uint Rasterizer::render() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//Draw 
-	bool wireframe = false;
 	if (wireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else
@@ -192,7 +191,17 @@ uint Rasterizer::render() {
 	shader.setVec3("viewPos", position);
 	shader.setFloat("material.shininess", 32);
 
+
 	scene.render(shader, false);
+
+	if (showNormals)
+	{
+		normalsShader.use();
+		normalsShader.setMat4("view", view);
+		normalsShader.setMat4("projection", projection);
+		normalsShader.setFloat("normalsLength", normalsLength);
+		scene.render(normalsShader, true);
+	} else
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);

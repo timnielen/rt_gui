@@ -9,6 +9,7 @@
 #define BLOCK_SIZE 256
 
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB aabb, uint materialIndex) {
+    std::cout << "Vert count: " << vertices.size() << std::endl;
     this->vertices = vertices;
     this->indices = indices;
     this->aabb = aabb;
@@ -95,7 +96,8 @@ void Mesh::renderAABB(Shader& shader) {
 __global__ void loadMaterial(Material** mat) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index != 0) return;
-    *mat = new Lambertian(Vec3(1));
+    //*mat = new Dielectric(1.5f);
+    *mat = new Lambertian(Vec3(1.0f));
 }
 
 __global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Vertex* vertices, Material** mat) {
@@ -291,9 +293,13 @@ __device__ bool Triangle::hit(const Ray& r, float tmin, float tmax, HitRecord& r
     {
         rec.t = t;
         rec.p = r.at(t);
-        rec.set_face_normal(r, (1 - u - v) * vertices[indexA].Normal + u * vertices[indexB].Normal + v * vertices[indexC].Normal);
-        //rec.set_face_normal(r, vertices[indexA].Normal);
+        //rec.set_face_normal(r, (1 - u - v) * vertices[indexA].Normal + u * vertices[indexB].Normal + v * vertices[indexC].Normal);
+        Vec3 nA = vertices[indexA].Normal;
+        Vec3 nB = vertices[indexB].Normal;
+        Vec3 nC = vertices[indexC].Normal;
+        rec.set_face_normal(r, d_normalize((1 - u - v) * nA + u * nB + v * nC), d_normalize(cross(edge1, edge2)));
         rec.mat = mat;
+
         return true;
     }
 

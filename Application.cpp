@@ -63,6 +63,13 @@ void App::renderUI(ImGuiIO& io) {
 
 	ImGui::Begin("Settings");
 	ImGui::Text("Framerate %.3f ms/frame (%.1f FPS)", 1000.0f * io.DeltaTime, 1.0f / io.DeltaTime);
+	if (ImGui::InputInt("Renderer", (int*)&(viewport->settings.renderer))) {
+		if (viewport->settings.renderer > renderTypeCount - 1)
+			viewport->settings.renderer = renderTypeCount - 1;
+		if (viewport->settings.renderer < 0)
+			viewport->settings.renderer = 0;
+		viewport->updateSettings();
+	}
 	
 	/*ImGui::Checkbox("Wireframe", &(viewport->settings.wireframe));
 	if (ImGui::Button("Reload shader")) {
@@ -83,6 +90,23 @@ void App::renderUI(ImGuiIO& io) {
 
 	ImGui::InputInt("Samples", &(rt_viewport->samples), 1);
 	ImGui::InputInt("Max Steps", &(rt_viewport->max_steps), 1);*/
+	ImGui::Text("Rasterizer");
+
+	if (ImGui::TreeNode("Rasterizer")) {
+		Rasterizer* rasterizer = (Rasterizer*)(viewport->camera->getRenderer(renderTypeRasterize));
+		ImGui::Checkbox("Draw Normals", &(rasterizer->showNormals));
+		ImGui::InputFloat("Normals Length", &(rasterizer->normalsLength));
+		ImGui::Checkbox("Wireframe", &(rasterizer->wireframe));
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("Raytracer")) {
+		RayTracer* rayTracer = (RayTracer*)(viewport->camera->getRenderer(renderTypeRayTrace));
+		if (ImGui::InputInt("Samples", &rayTracer->samples)) rayTracer->updateView();
+		if (ImGui::InputInt("Max Steps", &rayTracer->max_steps)) rayTracer->updateView();
+		ImGui::TreePop();
+	}
+
 
 	if (ImGui::TreeNode("Materials"))
 	{
@@ -110,13 +134,7 @@ void App::renderUI(ImGuiIO& io) {
 		ImGui::TreePop();
 	}
 
-	if (ImGui::InputInt("Renderer", (int*)&(viewport->settings.renderer))) {
-		if (viewport->settings.renderer > renderTypeCount - 1)
-			viewport->settings.renderer = renderTypeCount - 1;
-		if (viewport->settings.renderer < 0)
-			viewport->settings.renderer = 0;
-		viewport->updateSettings();
-	}
+	
 	ImGui::End();
 
 	viewport->draw(io.DeltaTime);

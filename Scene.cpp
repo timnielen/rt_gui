@@ -20,7 +20,7 @@ void printMat4(glm::mat4 m) {
 
 void Scene::loadModel(std::string path) {
     Assimp::Importer import;
-    const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
+    const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_GenNormals | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -204,6 +204,7 @@ void Scene::render(Shader& shader, bool points)
     {
         const Mesh& mesh = meshes[i];
         shader.setMat4("model", transform * transformations[i]);
+        
         const MultiMaterial& mat = mesh.materialIndex > 0 ? materials[mesh.materialIndex-1] : DEFAULT_MATERIAL;
         shader.setFloat("material.shininess", mat.shininess);
         uint activeTexture = 0;

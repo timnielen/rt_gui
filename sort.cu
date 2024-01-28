@@ -1,7 +1,7 @@
 #include "sort.h"
 #include <iostream>
 
-__device__ void sort::radixSort(unsigned int indices[], unsigned int keys[], unsigned int arrLength, unsigned int keyLength) {
+__device__ void sort::radixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength) {
     unsigned int* buckets[2];
     buckets[0] = new unsigned int[arrLength];
     buckets[1] = new unsigned int[arrLength];
@@ -13,7 +13,7 @@ __device__ void sort::radixSort(unsigned int indices[], unsigned int keys[], uns
         bucketSize[1] = 0;
         for (int i = 0; i < arrLength; i++) {
             int index = indices[i];
-            int bucket = (1 << k & keys[index]) >> k;
+            int bucket = (1ull << k & keys[index]) >> k;
             buckets[bucket][bucketSize[bucket]++] = index;
         }
         for (int i = 0; i < bucketSize[0]; i++)

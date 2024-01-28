@@ -23,7 +23,7 @@ public:
     Hitable** leaves;
     unsigned int countLeaves;
 
-    unsigned int* mortonCodes;
+    uint64_t* mortonCodes;
     unsigned int* sortedIndices;
 
     __device__ BVH(const HitableList& list) {

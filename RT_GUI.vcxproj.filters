@@ -79,7 +79,7 @@
     <None Include="shader\grid_geometry.glsl">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\in_color_fragment.glsl">
+    <None Include="shader\Normals\in_color_fragment.glsl">
       <Filter>shader</Filter>
     </None>
     <None Include="shader\vertex.glsl">
@@ -88,7 +88,7 @@
     <None Include="shader\pbr_fragment.glsl">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\normals_geometry.glsl">
+    <None Include="shader\Normals\normals_geometry.glsl">
       <Filter>shader</Filter>
     </None>
     <None Include="ClassDiagram.cd" />

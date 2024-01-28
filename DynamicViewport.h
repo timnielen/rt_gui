@@ -14,7 +14,6 @@ struct ViewportSettings {
 class DynamicViewport
 {
 private:
-	Camera *camera;
 	ImVec2 size;
 	void updateFramebuffer();
 	void handleUserInput(float deltaTime);
@@ -23,6 +22,7 @@ private:
 	ImVec2 lastMousePos = { 0,0 };
 
 public:
+	Camera* camera;
 	Scene scene;
 	ViewportSettings settings;
 	void updateSettings() {
