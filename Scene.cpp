@@ -7,7 +7,7 @@
 #include <cuda_gl_interop.h>
 #include <curand_kernel.h>
 #include <chrono>
-
+#include "BVH.h"
 
 void printMat4(glm::mat4 m) {
     for (int i = 0; i < 4; i++)
@@ -264,23 +264,28 @@ void Scene::loadToDevice() {
     int meshCount = meshes.size();
 
     Hitable** hlist;
-    cudaMalloc((void**)&hlist, meshCount * sizeof(Hitable*));
+    cudaMallocManaged((void**)&hlist, meshCount * sizeof(Hitable*));
 
     auto t1 = high_resolution_clock::now();
 
     for (int i = 0; i < meshCount; i++) {
         meshes[i].loadToDevice(hlist + i);
     }
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
 
     auto t2 = high_resolution_clock::now();
     std::cout << "loading meshes into cuda took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
 
-    cudaMalloc((void**)&hitable, sizeof(Hitable*));
-    combineHitables << <1, 1 >> > (this->hitable, hlist, meshCount);
+    cudaMallocManaged((void**)&hitable, sizeof(Hitable*));
+    
+    initBVH(this->hitable, hlist, meshCount);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+    if (meshCount > 1)
+    {
+        constructBVH((BVH*)*hitable, meshCount);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+    }
 
 
     auto t3 = high_resolution_clock::now();

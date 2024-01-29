@@ -4,6 +4,7 @@
 #include "Hit.h"
 #include "algorithm"
 #include "sort.h"
+#include "GlobalTypes.h"
 
 class BVH_Node : public Hitable {
 public:
@@ -41,4 +42,10 @@ public:
     __device__ int prefixLength(unsigned int indexA, unsigned int indexB);
 };
 
-__global__ void constructBVH(BVH* bvh);
+__global__ void printMortonCodes(BVH* bvh);
+
+void constructBVH(BVH* bvh, uint size);
+
+void initBVH(Hitable** output, Hitable** hlist, int count, AABB aabb);
+
+void initBVH(Hitable** output, Hitable** hlist, int count);

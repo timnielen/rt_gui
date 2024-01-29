@@ -6,6 +6,8 @@
 
 #define MORTON_LENGTH 63
 
+#define BLOCK_SIZE 256
+
 //__device__ unsigned int expandBits(unsigned int v)
 //{
 //	v = (v * 0x00010001u) & 0xFF0000FFu;
@@ -73,16 +75,19 @@ __device__ void BVH::genMortonCodes() {
 		mortonCodes[i] = morton3D(centroid);
 	}
 
-	sort::radixSort(sortedIndices, mortonCodes, countLeaves, MORTON_LENGTH);
-	/*for (int i = 0; i < countLeaves; i++) {
-		printf("%016x\n", mortonCodes[sortedIndices[i]]);
-	}*/
+	sort::parallelRadixSort(sortedIndices, mortonCodes, countLeaves, MORTON_LENGTH);
+	
 }
 
+__global__ void printMortonCodes(BVH* bvh) {
+	for (int i = 0; i < bvh->countLeaves; i++) {
+		printf("%016llx\n", bvh->mortonCodes[bvh->sortedIndices[i]]);
+	}
+}
 
 // implementation of Karras et al. 2012
 __global__ 
-void constructBVH(BVH* bvh) {
+void _constructBVH(BVH* bvh) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	if (index > bvh->countLeaves - 2 || bvh->nodes == nullptr) return;
 
@@ -125,6 +130,9 @@ void constructBVH(BVH* bvh) {
 	for (int i = 1; i <= len; i++)
 		aabb = AABB(aabb, bvh->leaves[bvh->sortedIndices[index + i * direction]]->aabb);
 	bvh->nodes[index].aabb = aabb;
+}
+void constructBVH(BVH* bvh, uint size) {
+	_constructBVH << <(size + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
 }
 
 
@@ -189,19 +197,29 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 	//delete[] stack;
 	return hit_anything;
 }
+__global__ void _initBVH(Hitable** output, Hitable** hlist, int count, AABB aabb) {
+	if (blockIdx.x != 0 || threadIdx.x != 0) return;
+	if (count == 1) {
+		*output = *hlist;
+		return;
+	}
+	*output = new BVH(HitableList(hlist, count, aabb));
+}
 
-//__device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
-//	if (!aabb.hit(r, tmin, tmax))
-//		return false;
-//	HitRecord temp_rec;
-//	bool hit_anything = false;
-//	float closest_so_far = tmax;
-//	for (unsigned int i = 0; i < countLeaves; i++) {
-//		if (leaves[i]->hit(r, tmin, closest_so_far, temp_rec)) {
-//			hit_anything = true;
-//			closest_so_far = temp_rec.t;
-//			rec = temp_rec;
-//		}
-//	}
-//	return hit_anything;
-//}
+
+__global__ void _initBVH(Hitable** output, Hitable** hlist, int count) {
+	if (blockIdx.x != 0 || threadIdx.x != 0) return;
+	if (count == 1) {
+		*output = *hlist;
+		return;
+	}
+	*output = new BVH(HitableList(hlist, count));
+}
+
+void initBVH(Hitable** output, Hitable** hlist, int count, AABB aabb) {
+	_initBVH << <1, 1 >> > (output, hlist, count, aabb);
+}
+
+void initBVH(Hitable** output, Hitable** hlist, int count) {
+	_initBVH << <1, 1 >> > (output, hlist, count);
+}

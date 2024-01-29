@@ -8,7 +8,7 @@
 #define __CUDA_INTERNAL_COMPILATION__
 #include <math_functions.h>
 
-class Vec3
+class __align__(4) Vec3
 {
 public:
 	float x, y, z;

@@ -73,5 +73,3 @@ public:
     }
     __device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override;
 };
-
-__global__ void combineHitables(Hitable** output, Hitable** hlist, int count);

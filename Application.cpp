@@ -29,12 +29,20 @@ App::App() {
 	size_t currStackSize;
 	cudaDeviceGetLimit(&currStackSize, cudaLimitStackSize);
 	std::cout << "currStackSize:" << currStackSize << std::endl;
-	cudaDeviceSetLimit(cudaLimitStackSize, 1024 * 8);
+	checkCudaErrors(cudaDeviceSetLimit(cudaLimitStackSize, 1024 * 64));
+	cudaDeviceGetLimit(&currStackSize, cudaLimitStackSize);
+	std::cout << "new StackSize:" << currStackSize << std::endl;
 
 	size_t currMallocSize;
 	cudaDeviceGetLimit(&currMallocSize, cudaLimitMallocHeapSize);
 	std::cout << "currMallocSize:" << currMallocSize << std::endl;
-	cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2 * currMallocSize);
+	checkCudaErrors(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1llu << 30));
+	cudaDeviceGetLimit(&currMallocSize, cudaLimitMallocHeapSize);
+	std::cout << "new MallocSize:" << currMallocSize << std::endl;
+
+	size_t free, total;
+	cudaMemGetInfo(&free, &total);
+	std::cout << "total:" << total << ", free:" << free << std::endl;
 
 	viewport = new DynamicViewport();
 	//glfwSwapInterval(0);

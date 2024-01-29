@@ -73,4 +73,5 @@ namespace sort {
 
 
     __device__ void radixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength);
+    __device__ void parallelRadixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength);
 }

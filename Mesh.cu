@@ -122,39 +122,17 @@ void Mesh::renderAABB(Shader& shader) {
 __global__ void loadMaterial(Material** mat, MultiMaterial* multiMat) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index != 0) return;
-    //*mat = new Dielectric(1.5f);
-    //*mat = new Lambertian(Vec3(1.0f));
     MultiMaterial* newMat = new MultiMaterial();
     *newMat = *multiMat;
-    *mat = newMat;
+    //*mat = newMat;
+    //*mat = new Lambertian(Vec3(1.0f));
+    *mat = new Dielectric(1.5f);
 }
 
 __global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Vertex* vertices, Material** mat) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= triCount) return;
     hlist[index] = new Triangle(indices[3 * index], indices[3 * index + 1], indices[3 * index + 2], vertices, *mat);
-}
-
-__global__ void combineHitables(Hitable** output, Hitable** hlist, int count, AABB aabb) {
-    if (blockIdx.x != 0 || threadIdx.x != 0) return;
-    if (count == 1) {
-        *output = *hlist;
-        return;
-    }
-    BVH* bvh = new BVH(HitableList(hlist, count, aabb));
-    constructBVH << <(count + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
-    *output = bvh;
-}
-
-__global__ void combineHitables(Hitable** output, Hitable** hlist, int count) {
-    if (blockIdx.x != 0 || threadIdx.x != 0) return;
-    if (count == 1) {
-        *output = *hlist;
-        return;
-    }
-    BVH* bvh = new BVH(HitableList(hlist, count));
-    constructBVH << <(count + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
-    *output = bvh;
 }
 
 void Mesh::loadToDevice(Hitable** output) {
@@ -182,7 +160,19 @@ void Mesh::loadToDevice(Hitable** output) {
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    combineHitables << <1, 1 >> > (output, triangles, countTriangles, aabb);
+    initBVH(output, triangles, countTriangles, aabb);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    printMortonCodes<<<1,1>>>((BVH*)*output);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    if (countTriangles <= 1)
+        return;
+    constructBVH((BVH*)*output, countTriangles);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void Mesh::unmap() {
