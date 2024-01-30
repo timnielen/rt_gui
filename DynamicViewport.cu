@@ -8,8 +8,8 @@
 
 DynamicViewport::DynamicViewport() : size({ -1,-1 }) {
 	//scene = Scene("assets/ship/source/full_scene.fbx");
-	//scene = Scene("assets/Survival_BackPack_2/backpack.obj");
-	scene = Scene("assets/glass_monkey.obj");
+	scene = Scene("assets/Survival_BackPack_2/backpack.obj");
+	//scene = Scene("assets/glass_monkey.obj");
 	camera = new Camera(scene);
 	camera->setPosition(glm::vec3(0, 0, camera->distance));
 }
@@ -93,8 +93,8 @@ void DynamicViewport::draw(float deltaTime) {
 	updateFramebuffer();
 
 	handleUserInput(deltaTime);
-	
-	if(size.x > 1 && size.y > 1)
+
+	if (size.x > 1 && size.y > 1)
 	{
 		unsigned int image = camera->render();
 		ImGui::Image((void*)image, size, { 0, 1 }, { 1, 0 });

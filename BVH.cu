@@ -53,6 +53,38 @@ __device__ uint64_t morton3D(Vec3 v) {
 }
 
 
+__host__ BVH::BVH(Hitable** hlist, int size, AABB aabb) {
+	leaves = hlist;
+	countLeaves = size;
+	this->aabb = aabb;
+	if (size > 1)
+		cudaMalloc((void**)&nodes, (size - 1) * sizeof(BVH_Node));
+
+	cudaMalloc((void**)&sortedIndices, size * sizeof(unsigned int));
+	cudaMalloc((void**)&mortonCodes, size * sizeof(uint64_t));
+
+}
+
+void BVH::init() {
+
+	const int blockSize = 256;
+	const int numBlocks = (countLeaves + blockSize - 1) / blockSize;
+	genMortonCodes << <numBlocks, blockSize >> > (this);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	sort::parallelRadixSort(sortedIndices, mortonCodes, countLeaves, MORTON_LENGTH);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	constructBVH << <numBlocks, blockSize >> > (this);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	cudaFree(mortonCodes);
+	std::cout << "BVH constructed" << std::endl;
+}
+
 __device__ int BVH::prefixLength(unsigned int indexA, unsigned int indexB) {
 	if (indexB < 0 || indexB > countLeaves - 1) return -1;
 	uint64_t keyA = mortonCodes[sortedIndices[indexA]];
@@ -62,21 +94,17 @@ __device__ int BVH::prefixLength(unsigned int indexA, unsigned int indexB) {
 	return __clzll(keyA ^ keyB);
 }
 
-__device__ void BVH::genMortonCodes() {
-	mortonCodes = new uint64_t[countLeaves];
-	sortedIndices = new unsigned int[countLeaves];
-	Vec3 dimensions = aabb.max - aabb.min;
-	for (unsigned int i = 0; i < countLeaves; i++) {
-		sortedIndices[i] = i;
-		AABB child = leaves[i]->aabb;
-		Vec3 centroid = (child.min + child.max) / 2;
-		centroid = centroid - aabb.min;
-		centroid /= dimensions;
-		mortonCodes[i] = morton3D(centroid);
-	}
 
-	sort::parallelRadixSort(sortedIndices, mortonCodes, countLeaves, MORTON_LENGTH);
-	
+__global__ void genMortonCodes(BVH* bvh) {
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	if (index >= bvh->countLeaves) return;
+	Vec3 dimensions = bvh->aabb.max - bvh->aabb.min;
+	bvh->sortedIndices[index] = index;
+	AABB child = bvh->leaves[index]->aabb;
+	Vec3 centroid = (child.min + child.max) / 2;
+	centroid = centroid - bvh->aabb.min;
+	centroid /= dimensions;
+	bvh->mortonCodes[index] = morton3D(centroid);
 }
 
 __global__ void printMortonCodes(BVH* bvh) {
@@ -86,8 +114,8 @@ __global__ void printMortonCodes(BVH* bvh) {
 }
 
 // implementation of Karras et al. 2012
-__global__ 
-void _constructBVH(BVH* bvh) {
+__global__
+void constructBVH(BVH* bvh) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	if (index > bvh->countLeaves - 2 || bvh->nodes == nullptr) return;
 
@@ -121,7 +149,7 @@ void _constructBVH(BVH* bvh) {
 			split += t;
 	}
 
-	int splitPos = index + (split) * direction + min(direction, 0);
+	int splitPos = index + (split)*direction + min(direction, 0);
 
 	bool leftLeaf = min(index, indexEnd) == splitPos;
 	bool rightLeaf = max(index, indexEnd) == splitPos + 1;
@@ -131,12 +159,9 @@ void _constructBVH(BVH* bvh) {
 		aabb = AABB(aabb, bvh->leaves[bvh->sortedIndices[index + i * direction]]->aabb);
 	bvh->nodes[index].aabb = aabb;
 }
-void constructBVH(BVH* bvh, uint size) {
-	_constructBVH << <(size + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (bvh);
-}
 
 
-__device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const  {
+__device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
 	// Allocate traversal stack from thread-local memory,
 	// and push NULL to indicate that there are no postponed nodes.
 	if (!aabb.hit(r, tmin, tmax))
@@ -156,7 +181,7 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 	{
 		// Check each child node for overlap.
 		Hitable* childL = (node->leftIsLeaf) ? leaves[sortedIndices[node->splitPos]] : &nodes[node->splitPos];
-		Hitable* childR = (node->rightIsLeaf) ? leaves[sortedIndices[node->splitPos+1]] : &nodes[node->splitPos+1];
+		Hitable* childR = (node->rightIsLeaf) ? leaves[sortedIndices[node->splitPos + 1]] : &nodes[node->splitPos + 1];
 		bool overlapL = childL->aabb.hit(r, tmin, closest_so_far);
 		bool overlapR = childR->aabb.hit(r, tmin, closest_so_far);
 
@@ -197,29 +222,11 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 	//delete[] stack;
 	return hit_anything;
 }
-__global__ void _initBVH(Hitable** output, Hitable** hlist, int count, AABB aabb) {
-	if (blockIdx.x != 0 || threadIdx.x != 0) return;
-	if (count == 1) {
-		*output = *hlist;
-		return;
-	}
-	*output = new BVH(HitableList(hlist, count, aabb));
+
+__global__ void copyBvhToHitable(Hitable** hitable, BVH* bvh) {
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	if (index != 0) return;
+	*hitable = new BVH(*bvh);
 }
 
 
-__global__ void _initBVH(Hitable** output, Hitable** hlist, int count) {
-	if (blockIdx.x != 0 || threadIdx.x != 0) return;
-	if (count == 1) {
-		*output = *hlist;
-		return;
-	}
-	*output = new BVH(HitableList(hlist, count));
-}
-
-void initBVH(Hitable** output, Hitable** hlist, int count, AABB aabb) {
-	_initBVH << <1, 1 >> > (output, hlist, count, aabb);
-}
-
-void initBVH(Hitable** output, Hitable** hlist, int count) {
-	_initBVH << <1, 1 >> > (output, hlist, count);
-}

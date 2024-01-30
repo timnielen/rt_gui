@@ -114,7 +114,7 @@ Mesh Scene::processMesh(aiMesh* mesh, const aiScene* scene)
     //process AABB
     auto min = mesh->mAABB.mMin;
     auto max = mesh->mAABB.mMax;
-    AABB aabb = AABB(Vec3(min.x, min.y, min.z), Vec3(max.x,max.y,max.z));
+    AABB aabb = AABB(Vec3(min.x, min.y, min.z), Vec3(max.x, max.y, max.z));
     return Mesh(vertices, indices, aabb, material);
 }
 
@@ -203,7 +203,7 @@ void Scene::render(Shader& shader, bool points)
     transform = glm::translate(transform, position);
     transform = glm::rotate(transform, angle, rotationAxis);
     transform = glm::scale(transform, scale);
-    
+
     for (uint i = 0; i < meshes.size(); i++)
     {
         const Mesh& mesh = meshes[i];
@@ -267,26 +267,27 @@ void Scene::loadToDevice() {
     cudaMallocManaged((void**)&hlist, meshCount * sizeof(Hitable*));
 
     auto t1 = high_resolution_clock::now();
-
+    AABB aabb;
     for (int i = 0; i < meshCount; i++) {
+        aabb = AABB(aabb, meshes[i].aabb);
         meshes[i].loadToDevice(hlist + i);
     }
 
     auto t2 = high_resolution_clock::now();
     std::cout << "loading meshes into cuda took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
 
-    cudaMallocManaged((void**)&hitable, sizeof(Hitable*));
-    
-    initBVH(this->hitable, hlist, meshCount);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    if (meshCount > 1)
-    {
-        constructBVH((BVH*)*hitable, meshCount);
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
-    }
 
+    if (meshCount > 1) {
+        cudaMallocManaged((void**)&hitable, sizeof(Hitable*));
+        BVH* bvh;
+        cudaMallocManaged((void**)&bvh, sizeof(BVH));
+        cudaMemcpy(bvh, &BVH(hlist, meshCount, aabb), sizeof(BVH), cudaMemcpyDefault);
+        bvh->init();
+        copyBvhToHitable << <1, 1 >> > (hitable, bvh);
+        cudaFree(bvh);
+    }
+    else
+        hitable = hlist;
 
     auto t3 = high_resolution_clock::now();
     std::cout << "combining meshes  took " << duration_cast<milliseconds>(t3 - t2).count() << "ms" << std::endl;

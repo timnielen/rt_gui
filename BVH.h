@@ -20,32 +20,25 @@ public:
 
 class BVH : public Hitable {
 public:
-    BVH_Node* nodes;
+    BVH_Node* nodes = nullptr;
     Hitable** leaves;
     unsigned int countLeaves;
 
-    uint64_t* mortonCodes;
-    unsigned int* sortedIndices;
+    uint64_t* mortonCodes = nullptr;
+    unsigned int* sortedIndices = nullptr;
 
-    __device__ BVH(const HitableList& list) {
-        countLeaves = list.size();
-        leaves = list.list;
-		nodes = (countLeaves == 1) ? nullptr : new BVH_Node[countLeaves - 1];
-        aabb = list.aabb;
-        genMortonCodes();
-    }
-    
-    __device__ void genMortonCodes();
-	__device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override;
+    __host__ BVH(Hitable** hlist, int size, AABB aabb);
+    void init();
+
+    __device__ bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const override;
 
     // Get common prefix Length of the morton codes of the sorted leaves at indexA and indexB
     __device__ int prefixLength(unsigned int indexA, unsigned int indexB);
 };
+__global__ void constructBVH(BVH* bvh);
+
+__global__ void copyBvhToHitable(Hitable** hitable, BVH* bvh);
 
 __global__ void printMortonCodes(BVH* bvh);
 
-void constructBVH(BVH* bvh, uint size);
-
-void initBVH(Hitable** output, Hitable** hlist, int count, AABB aabb);
-
-void initBVH(Hitable** output, Hitable** hlist, int count);
+__global__ void genMortonCodes(BVH* bvh);

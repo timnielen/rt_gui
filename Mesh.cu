@@ -150,7 +150,7 @@ void Mesh::loadToDevice(Hitable** output) {
     cudaGraphicsMapResources(1, &cudaVBO, 0);
     cudaGraphicsResourceGetMappedPointer((void**)&vertices, &num_bytes, cudaVBO);
 
-    cudaMalloc((void**)&triangles, countTriangles * sizeof(Hitable*));
+    cudaMallocManaged((void**)&triangles, countTriangles * sizeof(Hitable*));
     cudaMalloc((void**)&mat, sizeof(Material*));
     loadMaterial << <1, 1 >> > (mat, material);
     checkCudaErrors(cudaGetLastError());
@@ -160,19 +160,17 @@ void Mesh::loadToDevice(Hitable** output) {
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    initBVH(output, triangles, countTriangles, aabb);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    printMortonCodes<<<1,1>>>((BVH*)*output);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    if (countTriangles <= 1)
-        return;
-    constructBVH((BVH*)*output, countTriangles);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    if (countTriangles > 1)
+    {
+        BVH* bvh;
+        cudaMallocManaged((void**)&bvh, sizeof(BVH));
+        cudaMemcpy(bvh, &BVH(triangles, countTriangles, aabb), sizeof(BVH), cudaMemcpyDefault);
+        bvh->init();
+        copyBvhToHitable << <1, 1 >> > (output, bvh);
+        cudaFree(bvh);
+    }
+    else
+        *output = *triangles;
 }
 
 void Mesh::unmap() {

@@ -36,7 +36,7 @@ App::App() {
 	size_t currMallocSize;
 	cudaDeviceGetLimit(&currMallocSize, cudaLimitMallocHeapSize);
 	std::cout << "currMallocSize:" << currMallocSize << std::endl;
-	checkCudaErrors(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1llu << 30));
+	checkCudaErrors(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1llu << 29));
 	cudaDeviceGetLimit(&currMallocSize, cudaLimitMallocHeapSize);
 	std::cout << "new MallocSize:" << currMallocSize << std::endl;
 
@@ -55,7 +55,7 @@ void App::showTextureStack(MultiMaterial* mat, const char* name, TextureType typ
 			ImGui::InputFloat3("Base Color", &(mat->colors[type].x));
 		else
 		{
-			ImGui::Image((void*)mat->textures[type], ImVec2(200, 200), {0, 1}, {1, 0});
+			ImGui::Image((void*)mat->textures[type], ImVec2(200, 200), { 0, 1 }, { 1, 0 });
 		}
 		ImGui::TreePop();
 	}
@@ -75,7 +75,7 @@ void App::renderUI(ImGuiIO& io) {
 			viewport->settings.renderer = 0;
 		viewport->updateSettings();
 	}
-	
+
 	/*ImGui::Checkbox("Wireframe", &(viewport->settings.wireframe));
 	if (ImGui::Button("Reload shader")) {
 		shader.destroy();
@@ -129,7 +129,7 @@ void App::renderUI(ImGuiIO& io) {
 				ImGui::Text("Refraction Index %.2f", mat->refractionIndex);
 				ImGui::InputFloat("Shininess", &mat->shininess);
 				ImGui::Text("Shininess Strength %.2f", mat->shininessStrength);
-				
+
 				showTextureStack(mat, "Diffuse", textureTypeDiffuse);
 				showTextureStack(mat, "Specular", textureTypeSpecular);
 				showTextureStack(mat, "Normal", textureTypeNormal);
@@ -139,7 +139,7 @@ void App::renderUI(ImGuiIO& io) {
 		ImGui::TreePop();
 	}
 
-	
+
 	ImGui::End();
 
 	viewport->draw(io.DeltaTime);

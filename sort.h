@@ -2,6 +2,7 @@
 #include "cuda_runtime.h"
 #include <curand_kernel.h>
 #include "device_launch_parameters.h"
+#include <inttypes.h>
 
 namespace sort {
     template<class T>
@@ -35,7 +36,7 @@ namespace sort {
     __device__ void quickSort(T arr[], int l, int h, OP compare)
     {
         // Create an auxiliary stack 
-        int *stack = new int[h - l + 1];
+        int* stack = new int[h - l + 1];
 
         // initialize top of stack 
         int top = -1;
@@ -73,5 +74,5 @@ namespace sort {
 
 
     __device__ void radixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength);
-    __device__ void parallelRadixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength);
+    void parallelRadixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength);
 }

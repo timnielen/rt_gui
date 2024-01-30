@@ -52,8 +52,8 @@ void RayTracer::updateView() {
 
 	accumulation = 0;
 	if (deviceCopy == nullptr)
-		cudaMallocManaged((void**)&deviceCopy, sizeof(RayTracer));
-	*deviceCopy = *this;
+		cudaMalloc((void**)&deviceCopy, sizeof(RayTracer));
+	cudaMemcpy(deviceCopy, this, sizeof(RayTracer), cudaMemcpyHostToDevice);
 }
 
 void Rasterizer::resize(const int& width, const int& height, const float& fov, const float& nearPlane, const float& farPlane) {
@@ -201,9 +201,10 @@ uint Rasterizer::render() {
 		normalsShader.setMat4("projection", projection);
 		normalsShader.setFloat("normalsLength", normalsLength);
 		scene.render(normalsShader, true);
-	} else
+	}
+	else
 
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
 	glBlitFramebuffer(0, 0, imageWidth, imageHeight, 0, 0, imageWidth, imageHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
