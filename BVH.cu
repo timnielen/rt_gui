@@ -3,6 +3,7 @@
 #include "Material.h"
 #include "stdint.h"
 #include <inttypes.h>
+#include <chrono>
 
 #define MORTON_LENGTH 63
 
@@ -58,17 +59,22 @@ __host__ BVH::BVH(Hitable** hlist, int size, AABB aabb) {
 	countLeaves = size;
 	this->aabb = aabb;
 	if (size > 1)
+	{
 		cudaMalloc((void**)&nodes, (size - 1) * sizeof(BVH_Node));
+		cudaMalloc((void**)&nodeParents, (size - 1) * sizeof(unsigned int));
+	}
 
 	cudaMalloc((void**)&sortedIndices, size * sizeof(unsigned int));
+	cudaMalloc((void**)&leafParents, size * sizeof(unsigned int));
 	cudaMalloc((void**)&mortonCodes, size * sizeof(uint64_t));
 
 }
 
 void BVH::init() {
-
 	const int blockSize = 256;
 	const int numBlocks = (countLeaves + blockSize - 1) / blockSize;
+
+
 	genMortonCodes << <numBlocks, blockSize >> > (this);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
@@ -77,12 +83,31 @@ void BVH::init() {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
+	/*printMortonCodes << <1, 1 >> > (this);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());*/
+
 	constructBVH << <numBlocks, blockSize >> > (this);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+	
+	unsigned int* visited;
+	cudaMalloc((void**)&visited, (countLeaves - 1) * sizeof(unsigned int));
+	cudaMemset(visited, 0, (countLeaves - 1) * sizeof(unsigned int));
+	genAABBs << <numBlocks, blockSize >> > (this, visited);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 
+	cudaFree(visited);
+	visited = nullptr;
+	cudaFree(leafParents);
+	leafParents = nullptr;
+	cudaFree(nodeParents);
+	nodeParents = nullptr;
+	cudaFree(sortedIndices);
+	sortedIndices = nullptr;
 	cudaFree(mortonCodes);
-	std::cout << "BVH constructed" << std::endl;
+	mortonCodes = nullptr;
 }
 
 __device__ int BVH::prefixLength(unsigned int indexA, unsigned int indexB) {
@@ -153,11 +178,32 @@ void constructBVH(BVH* bvh) {
 
 	bool leftLeaf = min(index, indexEnd) == splitPos;
 	bool rightLeaf = max(index, indexEnd) == splitPos + 1;
-	bvh->nodes[index] = BVH_Node(splitPos, leftLeaf, rightLeaf);
-	AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
+	bvh->nodes[index] = BVH_Node(leftLeaf ? bvh->sortedIndices[splitPos] : splitPos, rightLeaf ? bvh->sortedIndices[splitPos+1] : splitPos+1, leftLeaf, rightLeaf);
+	if (leftLeaf)
+		bvh->leafParents[bvh->sortedIndices[splitPos]] = index;
+	else 
+		bvh->nodeParents[splitPos] = index;
+	if (rightLeaf)
+		bvh->leafParents[bvh->sortedIndices[splitPos+1]] = index;
+	else
+		bvh->nodeParents[splitPos+1] = index;
+
+	/*AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
 	for (int i = 1; i <= len; i++)
 		aabb = AABB(aabb, bvh->leaves[bvh->sortedIndices[index + i * direction]]->aabb);
-	bvh->nodes[index].aabb = aabb;
+	bvh->nodes[index].aabb = aabb;*/
+}
+__global__ void genAABBs(BVH* bvh, unsigned int* visited) {
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	if (index >= bvh->countLeaves || bvh->nodes == nullptr) return;
+	for (unsigned int current = bvh->leafParents[index]; current != -1; current = (current == 0) ? -1 : bvh->nodeParents[current]) {
+		if (atomicAdd(visited + current, 1) == 0)
+			return;
+		BVH_Node& node = bvh->nodes[current];
+		AABB leftAABB = node.leftIsLeaf ? bvh->leaves[node.left]->aabb : bvh->nodes[node.left].aabb;
+		AABB rightAABB = node.rightIsLeaf ? bvh->leaves[node.right]->aabb : bvh->nodes[node.right].aabb;
+		node.aabb = AABB(leftAABB, rightAABB);
+	}
 }
 
 
@@ -180,8 +226,8 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 	do
 	{
 		// Check each child node for overlap.
-		Hitable* childL = (node->leftIsLeaf) ? leaves[sortedIndices[node->splitPos]] : &nodes[node->splitPos];
-		Hitable* childR = (node->rightIsLeaf) ? leaves[sortedIndices[node->splitPos + 1]] : &nodes[node->splitPos + 1];
+		Hitable* childL = (node->leftIsLeaf) ? leaves[node->left] : &nodes[node->left];
+		Hitable* childR = (node->rightIsLeaf) ? leaves[node->right] : &nodes[node->right];
 		bool overlapL = childL->aabb.hit(r, tmin, closest_so_far);
 		bool overlapR = childR->aabb.hit(r, tmin, closest_so_far);
 
