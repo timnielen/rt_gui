@@ -216,7 +216,7 @@ void Scene::render(Shader& shader, bool points)
 void Scene::renderAABB(Shader& shader) {
     shader.setMat4("model", glm::mat4(1));
     glBindVertexArray(aabbVAO);
-    glDrawArrays(GL_LINES, 0, 2*aabbCount);
+    glDrawArrays(GL_LINES, 0, 2*primitiveCount);
     glBindVertexArray(0);
 }
 
@@ -250,10 +250,27 @@ glm::mat4 Scene::getModelTransformation() const {
     return transform;
 }
 
-__global__ void getAABBs(BVH* bvh, AABB* output) {
+__global__ void getAABBs(BVH* bvh, AABB* output, int depth = 0) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index > bvh->countLeaves - 2) return;
+    if (index > bvh->countLeaves - 1) return;
+    if (index != 213 && index != 219 && index != 231 && index != 266)
+        return;
     output[index] = bvh->nodes[index].aabb;
+    /*int element = index;
+    for (int i = 0; i < depth; i++) {
+        if (i == 0)
+            element = bvh->leafParents[element];
+        else
+            element = bvh->nodeParents[element];
+    }
+    if(depth == 0)
+        output[index] = bvh->leaves[element]->aabb;
+    else
+    {
+        if(element > bvh->countLeaves - 2) return;
+        output[index] = bvh->nodes[element].aabb;
+    }*/
+
 }
 
 void Scene::loadToDevice() {
@@ -267,8 +284,8 @@ void Scene::loadToDevice() {
     auto t1 = high_resolution_clock::now();
     
     
-    AABB aabb;
-    int primitiveCount = 0;
+    AABB aabb(Vec3(0),Vec3(0));
+    primitiveCount = 0;
     for (int i = 0; i < meshCount; i++) {
         aabb = AABB(aabb, meshes[i].aabb);
         meshes[i].loadToDevice();
@@ -288,34 +305,43 @@ void Scene::loadToDevice() {
     auto t3 = high_resolution_clock::now();
     std::cout << "copying primitives took: " << duration_cast<milliseconds>(t3 - t2).count() << "ms" << std::endl;
 
-    cudaMalloc((void**)&hitable, sizeof(Hitable*));
+    cudaMallocManaged((void**)&hitable, sizeof(Hitable*));
     BVH* bvh;
     cudaMallocManaged((void**)&bvh, sizeof(BVH));
     cudaMemcpy(bvh, &BVH(primitives, primitiveCount, aabb), sizeof(BVH), cudaMemcpyDefault);
     bvh->init();
-
-    aabbCount = (primitiveCount - 1);
-    checkCudaErrors(cudaMallocHost((void**)&aabbs, aabbCount * sizeof(AABB)));
-    const int blockSize = 256;
-    getAABBs << <(aabbCount + blockSize - 1) / blockSize, blockSize >> > (bvh, aabbs);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    
   
     copyBvhToHitable << <1, 1 >> > (hitable, bvh);
     cudaFree(bvh);
 
-    glGenVertexArrays(1, &aabbVAO);
-    unsigned int VBO;
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(aabbVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, aabbCount * sizeof(AABB), aabbs, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*)0);
-    // vertex normals
-    glBindVertexArray(0);
+    
 
     auto t4 = high_resolution_clock::now();
     std::cout << "generating bvh took: " << duration_cast<milliseconds>(t4 - t3).count() << "ms" << std::endl;
 }
 
+
+void Scene::loadAABBs(int depth) {
+    if (aabbs == nullptr)
+    {
+        checkCudaErrors(cudaMallocHost((void**)&aabbs, primitiveCount * sizeof(AABB)));
+    }
+    cudaMemset(aabbs, 0, primitiveCount * sizeof(AABB));
+    const int blockSize = 256;
+    getAABBs << <(primitiveCount + blockSize - 1) / blockSize, blockSize >> > ((BVH*)*hitable, aabbs, depth);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    glDeleteVertexArrays(1, &aabbVAO);
+    glGenVertexArrays(1, &aabbVAO);
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(aabbVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, primitiveCount * sizeof(AABB), aabbs, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*)0);
+    // vertex normals
+    glBindVertexArray(0);
+}

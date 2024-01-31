@@ -69,6 +69,14 @@ __host__ BVH::BVH(Hitable** hlist, int size, AABB aabb) {
 	cudaMallocManaged((void**)&leafParents, size * sizeof(int));
 
 }
+__global__ void printWrongAABBs(BVH* bvh) {
+	for (int i = 0; i < bvh->countLeaves - 1; i++) {
+		const AABB& aabb = bvh->nodes[i].aabb;
+		printf("%i: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f), l %d %d, r %d %d, parent %d\n", i, aabb.min.x, aabb.min.y, aabb.min.z, aabb.max.x, aabb.max.y, aabb.max.z, bvh->nodes[i].leftIsLeaf, bvh->nodes[i].left, bvh->nodes[i].rightIsLeaf, bvh->nodes[i].right, bvh->nodeParents[i]);
+	}
+}
+
+
 
 void BVH::init() {
 	if (countLeaves < 2)
@@ -93,19 +101,23 @@ void BVH::init() {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	
-	/*int* visited;
+	int* visited;
 	cudaMallocManaged((void**)&visited, (countLeaves-1) * sizeof(int));
 	cudaMemset(visited, 0, (countLeaves-1) * sizeof(int));
 	genAABBs << <numBlocks, blockSize >> > (this, visited);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
-
 	cudaFree(visited);
-	visited = nullptr;*/
-	cudaFree(leafParents);
-	leafParents = nullptr;
-	cudaFree(nodeParents);
-	nodeParents = nullptr;
+	visited = nullptr;
+
+	printWrongAABBs << <1, 1 >> > (this);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	/*cudaFree(leafParents);
+	leafParents = nullptr;*/
+	/*cudaFree(nodeParents);
+	nodeParents = nullptr;*/
 	cudaFree(sortedIndices);
 	sortedIndices = nullptr;
 	cudaFree(mortonCodes);
@@ -180,22 +192,24 @@ void constructBVH(BVH* bvh) {
 
 	int splitPos = index + (split)*direction + min(direction, 0);
 
-	bool leftLeaf = min(index, indexEnd) == splitPos;
-	bool rightLeaf = max(index, indexEnd) == splitPos + 1;
+	const bool leftLeaf = min(index, indexEnd) == splitPos;
+	const bool rightLeaf = max(index, indexEnd) == splitPos + 1;
 	bvh->nodes[index] = BVH_Node(leftLeaf ? bvh->sortedIndices[splitPos] : splitPos, rightLeaf ? bvh->sortedIndices[splitPos+1] : splitPos+1, leftLeaf, rightLeaf);
 	if (leftLeaf)
-		bvh->leafParents[bvh->sortedIndices[splitPos]] = index;
+		bvh->leafParents[bvh->nodes[index].left] = index;
 	else 
-		bvh->nodeParents[splitPos] = index;
+		bvh->nodeParents[bvh->nodes[index].left] = index;
 	if (rightLeaf)
-		bvh->leafParents[bvh->sortedIndices[splitPos+1]] = index;
+		bvh->leafParents[bvh->nodes[index].right] = index;
 	else
-		bvh->nodeParents[splitPos+1] = index;
+		bvh->nodeParents[bvh->nodes[index].right] = index;
 	bvh->nodeParents[0] = -1;
-	AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
+	
+	
+	/*AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
 	for (int i = 1; i <= len; i++)
 		aabb = AABB(aabb, bvh->leaves[bvh->sortedIndices[index + i * direction]]->aabb);
-	bvh->nodes[index].aabb = aabb;
+	bvh->nodes[index].aabb = aabb;*/
 }
 __global__ void genAABBs(BVH* bvh, int* visited) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -207,7 +221,19 @@ __global__ void genAABBs(BVH* bvh, int* visited) {
 		BVH_Node *node = &bvh->nodes[current];
 		AABB left = node->leftIsLeaf ? bvh->leaves[node->left]->aabb : bvh->nodes[node->left].aabb;
 		AABB right = node->rightIsLeaf ? bvh->leaves[node->right]->aabb : bvh->nodes[node->right].aabb;
-		node->aabb = AABB(left, right);
+		/*if(!node->leftIsLeaf)
+		{
+			AABB origLeft = bvh->nodes[node->left].aabb;
+			if (!(origLeft.min - left.min).near_zero() || !(origLeft.max - left.max).near_zero())
+				printf("Left %i: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) orig (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n", current, left.min.x, left.min.y, left.min.z, left.max.x, left.max.y, left.max.z, origLeft.min.x, origLeft.min.y, origLeft.min.z, origLeft.max.x, origLeft.max.y, origLeft.max.z);
+		}
+		if (!node->rightIsLeaf)
+		{
+			AABB origRight = bvh->nodes[node->right].aabb;
+			if (!(origRight.min - right.min).near_zero() || !(origRight.max - right.max).near_zero())
+				printf("Right %i: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) orig (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n", current, right.min.x, right.min.y, right.min.z, right.max.x, right.max.y, right.max.z, origRight.min.x, origRight.min.y, origRight.min.z, origRight.max.x, origRight.max.y, origRight.max.z);
+		}*/
+		node->aabb = AABB(right, left);
 		current = bvh->nodeParents[current];
 	}
 }

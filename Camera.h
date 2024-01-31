@@ -91,6 +91,7 @@ public:
 	bool wireframe = false;
 	bool showNormals = false;
 	bool showAABBs = false;
+	int aabbDepth = 0;
 	float normalsLength = 0.1f;
 private:
 	Scene& scene;

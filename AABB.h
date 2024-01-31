@@ -10,16 +10,16 @@ public:
         this->max = max;
     }
     __device__ __host__ AABB() {
-        this->min = Vec3(0.0f);
-        this->max = Vec3(0.0f);
+        this->min = Vec3(-100.0f);
+        this->max = Vec3(-100.0f);
     }
     __device__ __host__ AABB(const AABB& a, const AABB& b) {
-        min.x = fmin(a.min.x, b.min.x);
-        min.y = fmin(a.min.y, b.min.y);
-        min.z = fmin(a.min.z, b.min.z);
-        max.x = fmax(a.max.x, b.max.x);
-        max.y = fmax(a.max.y, b.max.y);
-        max.z = fmax(a.max.z, b.max.z);
+        this->min.x = fminf(a.min.x, b.min.x);
+        this->min.y = fminf(a.min.y, b.min.y);
+        this->min.z = fminf(a.min.z, b.min.z);
+        this->max.x = fmaxf(a.max.x, b.max.x);
+        this->max.y = fmaxf(a.max.y, b.max.y);
+        this->max.z = fmaxf(a.max.z, b.max.z);
     }
 
     __device__ bool hit(const Ray& r, float tmin, float tmax) const {

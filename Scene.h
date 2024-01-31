@@ -33,9 +33,10 @@ public:
 
     Hitable** hitable;
     Hitable** primitives;
-    AABB* aabbs;
+    int primitiveCount;
+    AABB* aabbs = nullptr;
     unsigned int aabbVAO;
-    int aabbCount;
+    void loadAABBs(int depth);
 private:
     // model data
     std::vector<Mesh> meshes;

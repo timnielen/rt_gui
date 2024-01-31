@@ -101,7 +101,9 @@ void App::renderUI(ImGuiIO& io) {
 		Rasterizer* rasterizer = (Rasterizer*)(viewport->camera->getRenderer(renderTypeRasterize));
 		ImGui::Checkbox("Draw Normals", &(rasterizer->showNormals));
 		ImGui::InputFloat("Normals Length", &(rasterizer->normalsLength));
-		ImGui::Checkbox("show AABBs", &(rasterizer->showAABBs));
+		if (ImGui::Checkbox("show AABBs", &(rasterizer->showAABBs)) || ImGui::InputInt("AABB depth", &(rasterizer->aabbDepth))) {
+			viewport->scene.loadAABBs(rasterizer->aabbDepth);
+		}
 		ImGui::Checkbox("Wireframe", &(rasterizer->wireframe));
 		ImGui::TreePop();
 	}
