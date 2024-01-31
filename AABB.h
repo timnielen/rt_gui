@@ -24,8 +24,8 @@ public:
 
     __device__ bool hit(const Ray& r, float tmin, float tmax) const {
         for (int a = 0; a < 3; a++) {
-            auto invD = r.invDir[a];
-            auto orig = r.origin[a];
+            float invD = r.invDir[a];
+            float orig = r.origin[a];
             float t0, t1;
 
             if (invD >= 0) {

@@ -67,7 +67,7 @@ vec3 evaluateTextureStack(TextureStack stack) {
 //    return ambient + diffuse + specular;
 //}
 
-vec4 strengthDirLight(DirLight light, vec3 normal, vec3 viewDir) {
+vec3 strengthDirLight(DirLight light, vec3 normal, vec3 viewDir) {
 
     vec3 lightDir = normalize(light.direction);
 
@@ -78,9 +78,9 @@ vec4 strengthDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     
     
-    vec4 ambient = vec4(light.ambient * evaluateTextureStack(material.diffuse), 1);
-    vec4 diffuse = vec4(light.diffuse * diff * evaluateTextureStack(material.diffuse),1);
-    vec4 specular = vec4(light.specular * spec * evaluateTextureStack(material.specular),1);
+    vec3 ambient = light.ambient * evaluateTextureStack(material.diffuse);
+    vec3 diffuse = light.diffuse * diff * evaluateTextureStack(material.diffuse);
+    vec3 specular = light.specular * spec * evaluateTextureStack(material.specular);
     return ambient + diffuse + specular;
 }
 
@@ -94,5 +94,6 @@ void main()
     }
     vec3 viewDir = normalize(viewPos - WorldPos);
 
-    FragColor = strengthDirLight(dLight, normal, viewDir); //strengthPointLight(pLight, norm, viewDir) + 
+    FragColor = vec4(strengthDirLight(dLight, normal, viewDir),1); //strengthPointLight(pLight, norm, viewDir) +
+    //FragColor *= FragColor;
 }

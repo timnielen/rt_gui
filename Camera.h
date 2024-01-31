@@ -110,7 +110,7 @@ class RayTracer : public Renderer {
 public:
 	RayTracer(const Scene& scene) {
 		this->scene = scene.hitable;
-		environment.init(load_texture("./assets/hdri/epping_forest_02_4k.hdr")); 
+		environment.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr")); 
 	}
 	__device__ Ray getRay(float u, float v) {
 		auto pixel_center = pixel00_loc + (u * viewportU * right) + (v * viewportV * up);

@@ -65,7 +65,7 @@ void Mesh::render(Shader& shader, bool points) const {
             type = "normal";
             break;
         default:
-            type = "diffuse";
+            continue;
         }
         shader.setBool("material." + type + ".useTex", material->textures[j] != -1);
         shader.setVec3("material." + type + ".baseColor", material->colors[j].toGLM());

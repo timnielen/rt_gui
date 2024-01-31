@@ -123,7 +123,7 @@ private:
 	}
 };
 
-enum TextureType { textureTypeDiffuse = 0, textureTypeSpecular, textureTypeNormal, textureTypeCount};
+enum TextureType { textureTypeDiffuse = 0, textureTypeSpecular, textureTypeNormal, textureTypeRoughness, textureTypeCount};
 
 
 class MultiMaterial : public Material {

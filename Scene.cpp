@@ -158,6 +158,9 @@ void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial* material)
             type = aiTextureType_SPECULAR;
             aiMat->Get(AI_MATKEY_COLOR_SPECULAR, col);
             break;
+        case textureTypeRoughness:
+            type = aiTextureType_DIFFUSE_ROUGHNESS;
+            break;
         }
 
         material->colors[t] = Vec3(col.r, col.g, col.b);
@@ -187,10 +190,8 @@ void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial* material)
             strcat(path, str.C_Str());
             std::cout << "loading texture: " << path << std::endl;
             newTexture.id = load_texture(path, flipTextures);
-            std::cout << newTexture.id << std::endl;
             newTexture.path = str.C_Str();
             material->textures[t] = newTexture.id;
-            std::cout << material->textures[t] << std::endl;
             textures_loaded.push_back(newTexture); // add to loaded textures
         }
 

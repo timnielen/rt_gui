@@ -135,6 +135,7 @@ void App::renderUI(ImGuiIO& io) {
 
 				showTextureStack(mat, "Diffuse", textureTypeDiffuse);
 				showTextureStack(mat, "Specular", textureTypeSpecular);
+				showTextureStack(mat, "Roughness", textureTypeRoughness);
 				showTextureStack(mat, "Normal", textureTypeNormal);
 				ImGui::TreePop();
 			}

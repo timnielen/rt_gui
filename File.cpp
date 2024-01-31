@@ -18,10 +18,20 @@ unsigned int load_texture(const char* path, bool flipVertical) {
 
 	if (data)
 	{
-		if (nrChannels == 3)
+		switch (nrChannels) {
+		case 1:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+			break;
+		case 2:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RG, GL_UNSIGNED_BYTE, data);
+			break;
+		case 3:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		else
+			break;
+		default:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+			break;
+		}
 
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
