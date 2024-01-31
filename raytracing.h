@@ -72,9 +72,11 @@ __device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, i
 			float2 hdriUV = sampleSphericalMap(d_normalize(cur_ray.direction));
 			float4 col_hdri = tex2D<float4>(hdri, hdriUV.x, hdriUV.y);
 			Vec3 c = Vec3(col_hdri.x, col_hdri.y, col_hdri.z);
+			Vec3 lDir(1, -1, -1);
+			c = Vec3(powf(fmaxf(dot(d_normalize(-cur_ray.direction), d_normalize(lDir)), 0.0f),1.0f) + 0.2f);
+			c = c * c;
 			//Vec3 c = Vec3(0.2f);
 			//reverse Gamma correction
-			c = c * c;
 			return cur_attenuation * c;
 		}
 	}

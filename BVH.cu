@@ -76,8 +76,6 @@ __global__ void printWrongAABBs(BVH* bvh) {
 	}
 }
 
-
-
 void BVH::init() {
 	if (countLeaves < 2)
 		return;
@@ -105,14 +103,15 @@ void BVH::init() {
 	cudaMallocManaged((void**)&visited, (countLeaves-1) * sizeof(int));
 	cudaMemset(visited, 0, (countLeaves-1) * sizeof(int));
 	genAABBs << <numBlocks, blockSize >> > (this, visited);
+	genAABBs << <numBlocks, blockSize >> > (this, visited);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	cudaFree(visited);
 	visited = nullptr;
 
-	printWrongAABBs << <1, 1 >> > (this);
+	/*printWrongAABBs << <1, 1 >> > (this);
 	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaDeviceSynchronize());*/
 
 	/*cudaFree(leafParents);
 	leafParents = nullptr;*/
@@ -132,7 +131,6 @@ __device__ int BVH::prefixLength(unsigned int indexA, unsigned int indexB) {
 		return MORTON_LENGTH + __clz(indexA ^ indexB);
 	return __clzll(keyA ^ keyB);
 }
-
 
 
 
@@ -217,23 +215,13 @@ __global__ void genAABBs(BVH* bvh, int* visited) {
 	int current = bvh->leafParents[index];
 	while (current != -1) {
 		if (atomicAdd(&visited[current], 1) == 0)
-			return;
+			break;
 		BVH_Node *node = &bvh->nodes[current];
-		AABB left = node->leftIsLeaf ? bvh->leaves[node->left]->aabb : bvh->nodes[node->left].aabb;
-		AABB right = node->rightIsLeaf ? bvh->leaves[node->right]->aabb : bvh->nodes[node->right].aabb;
-		/*if(!node->leftIsLeaf)
-		{
-			AABB origLeft = bvh->nodes[node->left].aabb;
-			if (!(origLeft.min - left.min).near_zero() || !(origLeft.max - left.max).near_zero())
-				printf("Left %i: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) orig (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n", current, left.min.x, left.min.y, left.min.z, left.max.x, left.max.y, left.max.z, origLeft.min.x, origLeft.min.y, origLeft.min.z, origLeft.max.x, origLeft.max.y, origLeft.max.z);
-		}
-		if (!node->rightIsLeaf)
-		{
-			AABB origRight = bvh->nodes[node->right].aabb;
-			if (!(origRight.min - right.min).near_zero() || !(origRight.max - right.max).near_zero())
-				printf("Right %i: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) orig (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n", current, right.min.x, right.min.y, right.min.z, right.max.x, right.max.y, right.max.z, origRight.min.x, origRight.min.y, origRight.min.z, origRight.max.x, origRight.max.y, origRight.max.z);
-		}*/
-		node->aabb = AABB(right, left);
+		AABB& left = node->leftIsLeaf ? bvh->leaves[node->left]->aabb : bvh->nodes[node->left].aabb;
+		AABB& right = node->rightIsLeaf ? bvh->leaves[node->right]->aabb : bvh->nodes[node->right].aabb;
+		AABB aabb = AABB(right, left);
+		node->aabb.max = aabb.max;
+		node->aabb.min = aabb.min;
 		current = bvh->nodeParents[current];
 	}
 }

@@ -10,8 +10,8 @@ public:
         this->max = max;
     }
     __device__ __host__ AABB() {
-        this->min = Vec3(-100.0f);
-        this->max = Vec3(-100.0f);
+        this->min = Vec3(1000.0f);
+        this->max = Vec3(-1000.0f);
     }
     __device__ __host__ AABB(const AABB& a, const AABB& b) {
         this->min.x = fminf(a.min.x, b.min.x);

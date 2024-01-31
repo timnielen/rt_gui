@@ -293,10 +293,12 @@ __device__ bool Triangle::hit(const Ray& r, float tmin, float tmax, HitRecord& r
         rec.uvCoords.x = w * tA.x + u * tB.x + v * tC.x;
         rec.uvCoords.y = w * tA.y + u * tB.y + v * tC.y;
 
-        Vec3 nA = vertices[indexA].Normal;
-        Vec3 nB = vertices[indexB].Normal;
-        Vec3 nC = vertices[indexC].Normal;
-        rec.set_face_normal(r, d_normalize(w * nA + u * nB + v * nC), d_normalize(cross(edge1, edge2)));
+        Vec3 tangent = d_normalize(w * vertices[indexA].Tangent + u * vertices[indexB].Tangent + v * vertices[indexC].Tangent);
+        Vec3 bitangent = d_normalize(w * vertices[indexA].Bitangent + u * vertices[indexB].Bitangent + v * vertices[indexC].Bitangent);
+        Vec3 normal = d_normalize(w * vertices[indexA].Normal + u * vertices[indexB].Normal + v * vertices[indexC].Normal);
+        rec.tangent = tangent;
+        rec.bitangent = bitangent;
+        rec.set_face_normal(r, normal, d_normalize(cross(edge1, edge2)));
         rec.mat = mat;
 
         return true;

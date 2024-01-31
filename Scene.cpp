@@ -253,10 +253,7 @@ glm::mat4 Scene::getModelTransformation() const {
 __global__ void getAABBs(BVH* bvh, AABB* output, int depth = 0) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index > bvh->countLeaves - 1) return;
-    if (index != 213 && index != 219 && index != 231 && index != 266)
-        return;
-    output[index] = bvh->nodes[index].aabb;
-    /*int element = index;
+    int element = index;
     for (int i = 0; i < depth; i++) {
         if (i == 0)
             element = bvh->leafParents[element];
@@ -269,7 +266,7 @@ __global__ void getAABBs(BVH* bvh, AABB* output, int depth = 0) {
     {
         if(element > bvh->countLeaves - 2) return;
         output[index] = bvh->nodes[element].aabb;
-    }*/
+    }
 
 }
 

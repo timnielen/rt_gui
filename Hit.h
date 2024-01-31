@@ -9,6 +9,8 @@ class HitRecord {
 public:
 	Point3 p;
 	Vec3 normal;
+	Vec3 tangent;
+	Vec3 bitangent;
 	float t;
 	bool front_face;
 	Material* mat;
@@ -19,6 +21,8 @@ public:
 		float d = dot(r.direction, faceNormal);
 		front_face = d < 0;
 		normal = front_face ? outward_normal : -outward_normal;
+		tangent = front_face ? tangent : -tangent;
+		bitangent = front_face ? bitangent : -bitangent;
 	}
 
 	__device__ __host__ void set_face_normal(const Ray& r, const Vec3& outward_normal) {
