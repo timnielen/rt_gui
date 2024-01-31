@@ -58,19 +58,21 @@ __host__ BVH::BVH(Hitable** hlist, int size, AABB aabb) {
 	leaves = hlist;
 	countLeaves = size;
 	this->aabb = aabb;
-	if (size > 1)
-	{
-		cudaMalloc((void**)&nodes, (size - 1) * sizeof(BVH_Node));
-		cudaMalloc((void**)&nodeParents, (size - 1) * sizeof(unsigned int));
-	}
+	if (countLeaves < 2)
+		return;
 
+	cudaMalloc((void**)&nodes, (size - 1) * sizeof(BVH_Node));
 	cudaMalloc((void**)&sortedIndices, size * sizeof(unsigned int));
-	cudaMalloc((void**)&leafParents, size * sizeof(unsigned int));
 	cudaMalloc((void**)&mortonCodes, size * sizeof(uint64_t));
+
+	cudaMallocManaged((void**)&nodeParents, (size - 1) * sizeof(int));
+	cudaMallocManaged((void**)&leafParents, size * sizeof(int));
 
 }
 
 void BVH::init() {
+	if (countLeaves < 2)
+		return;
 	const int blockSize = 256;
 	const int numBlocks = (countLeaves + blockSize - 1) / blockSize;
 
@@ -91,15 +93,15 @@ void BVH::init() {
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	
-	unsigned int* visited;
-	cudaMalloc((void**)&visited, (countLeaves - 1) * sizeof(unsigned int));
-	cudaMemset(visited, 0, (countLeaves - 1) * sizeof(unsigned int));
+	/*int* visited;
+	cudaMallocManaged((void**)&visited, (countLeaves-1) * sizeof(int));
+	cudaMemset(visited, 0, (countLeaves-1) * sizeof(int));
 	genAABBs << <numBlocks, blockSize >> > (this, visited);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 	cudaFree(visited);
-	visited = nullptr;
+	visited = nullptr;*/
 	cudaFree(leafParents);
 	leafParents = nullptr;
 	cudaFree(nodeParents);
@@ -118,6 +120,8 @@ __device__ int BVH::prefixLength(unsigned int indexA, unsigned int indexB) {
 		return MORTON_LENGTH + __clz(indexA ^ indexB);
 	return __clzll(keyA ^ keyB);
 }
+
+
 
 
 __global__ void genMortonCodes(BVH* bvh) {
@@ -187,22 +191,24 @@ void constructBVH(BVH* bvh) {
 		bvh->leafParents[bvh->sortedIndices[splitPos+1]] = index;
 	else
 		bvh->nodeParents[splitPos+1] = index;
-
-	/*AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
+	bvh->nodeParents[0] = -1;
+	AABB aabb = bvh->leaves[bvh->sortedIndices[index]]->aabb;
 	for (int i = 1; i <= len; i++)
 		aabb = AABB(aabb, bvh->leaves[bvh->sortedIndices[index + i * direction]]->aabb);
-	bvh->nodes[index].aabb = aabb;*/
+	bvh->nodes[index].aabb = aabb;
 }
-__global__ void genAABBs(BVH* bvh, unsigned int* visited) {
+__global__ void genAABBs(BVH* bvh, int* visited) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
-	if (index >= bvh->countLeaves || bvh->nodes == nullptr) return;
-	for (unsigned int current = bvh->leafParents[index]; current != -1; current = (current == 0) ? -1 : bvh->nodeParents[current]) {
-		if (atomicAdd(visited + current, 1) == 0)
+	if (index > bvh->countLeaves - 1) return;
+	int current = bvh->leafParents[index];
+	while (current != -1) {
+		if (atomicAdd(&visited[current], 1) == 0)
 			return;
-		BVH_Node& node = bvh->nodes[current];
-		AABB leftAABB = node.leftIsLeaf ? bvh->leaves[node.left]->aabb : bvh->nodes[node.left].aabb;
-		AABB rightAABB = node.rightIsLeaf ? bvh->leaves[node.right]->aabb : bvh->nodes[node.right].aabb;
-		node.aabb = AABB(leftAABB, rightAABB);
+		BVH_Node *node = &bvh->nodes[current];
+		AABB left = node->leftIsLeaf ? bvh->leaves[node->left]->aabb : bvh->nodes[node->left].aabb;
+		AABB right = node->rightIsLeaf ? bvh->leaves[node->right]->aabb : bvh->nodes[node->right].aabb;
+		node->aabb = AABB(left, right);
+		current = bvh->nodeParents[current];
 	}
 }
 
@@ -232,7 +238,6 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 		bool overlapR = childR->aabb.hit(r, tmin, closest_so_far);
 
 		// Query overlaps a leaf node => report collision.
-
 		if (overlapL && node->leftIsLeaf)
 		{
 			if (childL->hit(r, tmin, closest_so_far, temp_rec))
@@ -265,7 +270,6 @@ __device__ bool BVH::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) c
 				*stackPtr++ = (BVH_Node*)childR; // push
 		}
 	} while (node != NULL);
-	//delete[] stack;
 	return hit_anything;
 }
 

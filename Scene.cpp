@@ -8,6 +8,7 @@
 #include <curand_kernel.h>
 #include <chrono>
 #include "BVH.h"
+#include <thread>
 
 void printMat4(glm::mat4 m) {
     for (int i = 0; i < 4; i++)
@@ -213,15 +214,10 @@ void Scene::render(Shader& shader, bool points)
 }
 
 void Scene::renderAABB(Shader& shader) {
-    glm::mat4 transform = glm::mat4(1.0f);
-    transform = glm::translate(transform, position);
-    transform = glm::rotate(transform, angle, rotationAxis);
-    transform = glm::scale(transform, scale);
-    for (unsigned int i = 0; i < meshes.size(); i++)
-    {
-        shader.setMat4("model", transform * transformations[i]);
-        meshes[i].renderAABB(shader);
-    }
+    shader.setMat4("model", glm::mat4(1));
+    glBindVertexArray(aabbVAO);
+    glDrawArrays(GL_LINES, 0, 2*aabbCount);
+    glBindVertexArray(0);
 }
 
 Hit Scene::intersect(Ray& ray) {
@@ -254,6 +250,11 @@ glm::mat4 Scene::getModelTransformation() const {
     return transform;
 }
 
+__global__ void getAABBs(BVH* bvh, AABB* output) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index > bvh->countLeaves - 2) return;
+    output[index] = bvh->nodes[index].aabb;
+}
 
 void Scene::loadToDevice() {
     using std::chrono::high_resolution_clock;
@@ -263,32 +264,58 @@ void Scene::loadToDevice() {
 
     int meshCount = meshes.size();
 
-    Hitable** hlist;
-    cudaMallocManaged((void**)&hlist, meshCount * sizeof(Hitable*));
-
     auto t1 = high_resolution_clock::now();
+    
+    
     AABB aabb;
+    int primitiveCount = 0;
     for (int i = 0; i < meshCount; i++) {
         aabb = AABB(aabb, meshes[i].aabb);
-        meshes[i].loadToDevice(hlist + i);
+        meshes[i].loadToDevice();
+        primitiveCount += meshes[i].triCount;
     }
-
     auto t2 = high_resolution_clock::now();
     std::cout << "loading meshes into cuda took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
 
+    cudaMalloc((void**)&primitives, primitiveCount * sizeof(Hitable*));
 
-    if (meshCount > 1) {
-        cudaMallocManaged((void**)&hitable, sizeof(Hitable*));
-        BVH* bvh;
-        cudaMallocManaged((void**)&bvh, sizeof(BVH));
-        cudaMemcpy(bvh, &BVH(hlist, meshCount, aabb), sizeof(BVH), cudaMemcpyDefault);
-        bvh->init();
-        copyBvhToHitable << <1, 1 >> > (hitable, bvh);
-        cudaFree(bvh);
+    int offset = 0;
+    for (int i = 0; i < meshCount; i++) {
+        cudaMemcpy(primitives + offset, meshes[i].triangles, meshes[i].triCount * sizeof(Hitable*), cudaMemcpyDeviceToDevice);
+        cudaFree(meshes[i].triangles);
+        offset += meshes[i].triCount;
     }
-    else
-        hitable = hlist;
-
     auto t3 = high_resolution_clock::now();
-    std::cout << "combining meshes  took " << duration_cast<milliseconds>(t3 - t2).count() << "ms" << std::endl;
+    std::cout << "copying primitives took: " << duration_cast<milliseconds>(t3 - t2).count() << "ms" << std::endl;
+
+    cudaMalloc((void**)&hitable, sizeof(Hitable*));
+    BVH* bvh;
+    cudaMallocManaged((void**)&bvh, sizeof(BVH));
+    cudaMemcpy(bvh, &BVH(primitives, primitiveCount, aabb), sizeof(BVH), cudaMemcpyDefault);
+    bvh->init();
+
+    aabbCount = (primitiveCount - 1);
+    checkCudaErrors(cudaMallocHost((void**)&aabbs, aabbCount * sizeof(AABB)));
+    const int blockSize = 256;
+    getAABBs << <(aabbCount + blockSize - 1) / blockSize, blockSize >> > (bvh, aabbs);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+  
+    copyBvhToHitable << <1, 1 >> > (hitable, bvh);
+    cudaFree(bvh);
+
+    glGenVertexArrays(1, &aabbVAO);
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(aabbVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, aabbCount * sizeof(AABB), aabbs, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*)0);
+    // vertex normals
+    glBindVertexArray(0);
+
+    auto t4 = high_resolution_clock::now();
+    std::cout << "generating bvh took: " << duration_cast<milliseconds>(t4 - t3).count() << "ms" << std::endl;
 }
+

@@ -76,6 +76,12 @@ public:
 		normalsShader.setGeometry("./shader/Normals/normals_geometry.glsl");
 		normalsShader.setFragment("./shader/Normals/in_color_fragment.glsl");
 		normalsShader.link();
+
+		aabbShader.setVertex("./shader/AABB/vertex.glsl");
+		aabbShader.setGeometry("./shader/AABB/geometry.glsl");
+		aabbShader.setFragment("./shader/AABB/fragment.glsl");
+		aabbShader.link();
+
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_MULTISAMPLE);
 	}
@@ -84,13 +90,14 @@ public:
 	uint render() override;
 	bool wireframe = false;
 	bool showNormals = false;
+	bool showAABBs = false;
 	float normalsLength = 0.1f;
 private:
 	Scene& scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
 	glm::vec4 clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-	Shader shader, normalsShader;
+	Shader shader, normalsShader, aabbShader;
 	uint intermediateFBO = 0;
 	uint framebuffer = 0;
 	uint screenTexture = 0;
@@ -102,7 +109,7 @@ class RayTracer : public Renderer {
 public:
 	RayTracer(const Scene& scene) {
 		this->scene = scene.hitable;
-		environment.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr"));
+		environment.init(load_texture("./assets/hdri/epping_forest_02_4k.hdr")); 
 	}
 	__device__ Ray getRay(float u, float v) {
 		auto pixel_center = pixel00_loc + (u * viewportU * right) + (v * viewportV * up);

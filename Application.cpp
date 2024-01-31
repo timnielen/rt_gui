@@ -101,6 +101,7 @@ void App::renderUI(ImGuiIO& io) {
 		Rasterizer* rasterizer = (Rasterizer*)(viewport->camera->getRenderer(renderTypeRasterize));
 		ImGui::Checkbox("Draw Normals", &(rasterizer->showNormals));
 		ImGui::InputFloat("Normals Length", &(rasterizer->normalsLength));
+		ImGui::Checkbox("show AABBs", &(rasterizer->showAABBs));
 		ImGui::Checkbox("Wireframe", &(rasterizer->wireframe));
 		ImGui::TreePop();
 	}

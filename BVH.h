@@ -28,8 +28,8 @@ public:
 
     uint64_t* mortonCodes = nullptr;
     unsigned int* sortedIndices = nullptr;
-    unsigned int* leafParents = nullptr;
-    unsigned int* nodeParents = nullptr;
+    int* leafParents = nullptr;
+    int* nodeParents = nullptr;
 
     __host__ BVH(Hitable** hlist, int size, AABB aabb);
     void init();
@@ -39,7 +39,7 @@ public:
     // Get common prefix Length of the morton codes of the sorted leaves at indexA and indexB
     __device__ int prefixLength(unsigned int indexA, unsigned int indexB);
 };
-__global__ void genAABBs(BVH* bvh, unsigned int* visited);
+__global__ void genAABBs(BVH* bvh, int* visited);
 
 __global__ void constructBVH(BVH* bvh);
 

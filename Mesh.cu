@@ -17,34 +17,6 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, AABB
     setupMesh();
 }
 
-void Mesh::calcAABB() {
-    aabb.max = glm::vec3(vertices[0].Position);
-    aabb.min = glm::vec3(vertices[0].Position);
-    for (unsigned int i = 1; i < vertices.size(); i++) {
-        aabb.max.x = max(vertices[i].Position.x, aabb.max.x);
-        aabb.max.y = max(vertices[i].Position.y, aabb.max.y);
-        aabb.max.z = max(vertices[i].Position.z, aabb.max.z);
-
-        aabb.min.x = min(vertices[i].Position.x, aabb.min.x);
-        aabb.min.y = min(vertices[i].Position.y, aabb.min.y);
-        aabb.min.z = min(vertices[i].Position.z, aabb.min.z);
-    }
-
-
-    glGenVertexArrays(1, &aabbVAO);
-    unsigned int aabbVBO;
-    glGenBuffers(1, &aabbVBO);
-
-    glBindVertexArray(aabbVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, aabbVBO);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(BBox), &aabb, GL_STATIC_DRAW);
-
-    // vertex positions
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-}
-
 void Mesh::setupMesh() {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -59,7 +31,7 @@ void Mesh::setupMesh() {
 
     // vertex positions
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
     // vertex normals
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
@@ -124,9 +96,11 @@ __global__ void loadMaterial(Material** mat, MultiMaterial* multiMat) {
     if (index != 0) return;
     MultiMaterial* newMat = new MultiMaterial();
     *newMat = *multiMat;
+    *mat = newMat;
+    //*newMat = *multiMat;
     //*mat = newMat;
     //*mat = new Lambertian(Vec3(1.0f));
-    *mat = new Dielectric(1.5f);
+    //*mat = new Dielectric(1.5f);
 }
 
 __global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Vertex* vertices, Material** mat) {
@@ -135,7 +109,7 @@ __global__ void loadTriangles(Hitable** hlist, int* indices, int triCount, Verte
     hlist[index] = new Triangle(indices[3 * index], indices[3 * index + 1], indices[3 * index + 2], vertices, *mat);
 }
 
-void Mesh::loadToDevice(Hitable** output) {
+void Mesh::loadToDevice() {
 
     cudaGraphicsGLRegisterBuffer(&cudaVBO, VBO, cudaGraphicsRegisterFlagsReadOnly);
     cudaGraphicsGLRegisterBuffer(&cudaEBO, EBO, cudaGraphicsRegisterFlagsReadOnly);
@@ -144,23 +118,24 @@ void Mesh::loadToDevice(Hitable** output) {
     cudaGraphicsMapResources(1, &cudaEBO, 0);
     size_t num_bytes;
     cudaGraphicsResourceGetMappedPointer((void**)&indices, &num_bytes, cudaEBO);
-    int countTriangles = (num_bytes / sizeof(int)) / 3;
+    triCount = (num_bytes / sizeof(int)) / 3;
 
     Vertex* vertices;
     cudaGraphicsMapResources(1, &cudaVBO, 0);
     cudaGraphicsResourceGetMappedPointer((void**)&vertices, &num_bytes, cudaVBO);
 
-    cudaMallocManaged((void**)&triangles, countTriangles * sizeof(Hitable*));
+    cudaMallocManaged((void**)&triangles, triCount * sizeof(Hitable*));
+    Material** mat;
     cudaMalloc((void**)&mat, sizeof(Material*));
     loadMaterial << <1, 1 >> > (mat, material);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    loadTriangles << <(countTriangles + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (triangles, indices, countTriangles, vertices, mat);
+    loadTriangles << <(triCount + BLOCK_SIZE - 1) / BLOCK_SIZE, BLOCK_SIZE >> > (triangles, indices, triCount, vertices, mat);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    if (countTriangles > 1)
+    /*if (countTriangles > 1)
     {
         BVH* bvh;
         cudaMallocManaged((void**)&bvh, sizeof(BVH));
@@ -170,7 +145,7 @@ void Mesh::loadToDevice(Hitable** output) {
         cudaFree(bvh);
     }
     else
-        *output = *triangles;
+        *output = *triangles;*/
 }
 
 void Mesh::unmap() {

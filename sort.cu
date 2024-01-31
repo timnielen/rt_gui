@@ -33,18 +33,13 @@ __device__ void sort::radixSort(unsigned int indices[], uint64_t keys[], unsigne
     delete[] buckets[1];
 }
 
-__global__ void parallelRadixSortKernel(unsigned int indices[], uint64_t keys[], const unsigned int arrLength, const unsigned int keyLength, const unsigned int parts, const unsigned int partSize) {
-    extern __shared__ unsigned int shmem[];
-    __shared__ int semaphor[1];
-    const int bucketCount = 2;
-
-    unsigned int* cnt = shmem;
-    unsigned int* tmpIndices = shmem + bucketCount * parts;
+__global__ void parallelRadixSortKernel(unsigned int indices[], uint64_t keys[], const unsigned int arrLength, const unsigned int keyLength, const unsigned int parts, const unsigned int partSize, unsigned int tmpIndices[]) {
+    extern __shared__ unsigned int cnt[];
     const int part = threadIdx.x;
     const int start = part * partSize;
-    if (start >= arrLength) {
+    if (start >= arrLength)
         return;
-    };
+    const int bucketCount = 2;
     const int end = fminf(start + partSize, arrLength);
     for (int key = 0; key < keyLength; key++) {
         cnt[bucketCount * part] = 0;
@@ -69,6 +64,7 @@ __global__ void parallelRadixSortKernel(unsigned int indices[], uint64_t keys[],
         for (int i = start; i < end; i++) {
             tmpIndices[i] = indices[i];
         }
+        __syncthreads();
         for (int i = start; i < end; i++) {
             unsigned int index = tmpIndices[i];
             int bucket = ((1ull << key) & keys[index]) >> key;
@@ -79,8 +75,11 @@ __global__ void parallelRadixSortKernel(unsigned int indices[], uint64_t keys[],
 }
 
 void sort::parallelRadixSort(unsigned int indices[], uint64_t keys[], unsigned int arrLength, unsigned int keyLength) {
-    const int blockSize = 32;
+    const int blockSize = 1024;
     const int partSize = (arrLength + blockSize - 1) / blockSize;
     const int parts = (arrLength + partSize - 1) / partSize;
-    parallelRadixSortKernel << <1, blockSize, 2 * parts * sizeof(unsigned int) + arrLength * sizeof(unsigned int) >> > (indices, keys, arrLength, keyLength, parts, partSize);
+    unsigned int* tmpIndices;
+    cudaMalloc((void**)&tmpIndices, sizeof(unsigned int) * arrLength);
+    parallelRadixSortKernel << <1, blockSize, 2 * parts * sizeof(unsigned int) >> > (indices, keys, arrLength, keyLength, parts, partSize, tmpIndices);
+    cudaFree(tmpIndices);
 }

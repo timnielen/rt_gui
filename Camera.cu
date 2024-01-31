@@ -202,9 +202,16 @@ uint Rasterizer::render() {
 		normalsShader.setFloat("normalsLength", normalsLength);
 		scene.render(normalsShader, true);
 	}
-	else
 
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+	if (showAABBs)
+	{
+		aabbShader.use();
+		aabbShader.setMat4("view", view);
+		aabbShader.setMat4("projection", projection);
+		scene.renderAABB(aabbShader);
+	}
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
 	glBlitFramebuffer(0, 0, imageWidth, imageHeight, 0, 0, imageWidth, imageHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 

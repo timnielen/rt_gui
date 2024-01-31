@@ -6,6 +6,7 @@
 #include <assimp/postprocess.h>
 #include "Ray.h"
 #include "Hit.h"
+#include "BVH.h"
 
 class Scene
 {
@@ -31,6 +32,10 @@ public:
     std::vector<Texture> textures_loaded;
 
     Hitable** hitable;
+    Hitable** primitives;
+    AABB* aabbs;
+    unsigned int aabbVAO;
+    int aabbCount;
 private:
     // model data
     std::vector<Mesh> meshes;

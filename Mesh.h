@@ -39,16 +39,13 @@ public:
     Hit intersect(Ray& r, glm::mat4 transform = glm::mat4(1));
     unsigned int VAO, VBO, EBO;
 
-    Hitable** bvh = nullptr;
     Hitable** triangles = nullptr;
-    Material** mat;
+    int triCount;
     cudaGraphicsResource_t cudaEBO;
     cudaGraphicsResource_t cudaVBO;
-    void loadToDevice(Hitable** output);
+    void loadToDevice();
     void unmap();
 private:
-    //  render data
-    void calcAABB();
     void setupMesh();
 };
 
