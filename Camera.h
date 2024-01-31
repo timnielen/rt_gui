@@ -97,7 +97,7 @@ private:
 	Scene& scene;
 	glm::mat4 projection = glm::mat4(1);
 	glm::mat4 view = glm::mat4(1);
-	glm::vec4 clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+	glm::vec4 clearColor = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
 	Shader shader, normalsShader, aabbShader;
 	uint intermediateFBO = 0;
 	uint framebuffer = 0;

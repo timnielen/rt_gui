@@ -95,5 +95,6 @@ void main()
     vec3 viewDir = normalize(viewPos - WorldPos);
 
     FragColor = vec4(strengthDirLight(dLight, normal, viewDir),1); //strengthPointLight(pLight, norm, viewDir) +
-    //FragColor *= FragColor;
+    float gamma = 2;
+    FragColor.rgb = pow(FragColor.rgb, vec3(1.0 / gamma));
 }
