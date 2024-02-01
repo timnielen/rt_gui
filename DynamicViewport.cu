@@ -8,8 +8,8 @@
 
 DynamicViewport::DynamicViewport() : size({ -1,-1 }) {
 	//scene = Scene("assets/ship/source/full_scene.fbx");
-	//scene = Scene("assets/cornell.obj");
-	scene = Scene("assets/Survival_BackPack_2/backpack.obj", false);
+	scene = Scene("assets/cornell.obj");
+	//scene = Scene("assets/Survival_BackPack_2/backpack.obj", false);
 	//scene = Scene("assets/test.obj");
 	camera = new Camera(scene);
 	camera->setPosition(glm::vec3(0, 0, camera->distance));

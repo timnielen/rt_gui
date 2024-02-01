@@ -50,11 +50,11 @@ __device__ bool MultiMaterial::scatter(
 		return dot(scattered.direction, normal) > 0;
 	}
 	else {
-		Vec3 dir = random_on_hemisphere(normal, local_rand_state);
+		Vec3 dir = normal + random_unit_vector(local_rand_state);
 		// Catch degenerate scatter direction
 		if (dir.near_zero())
 			dir = normal;
-		auto cos_theta = dot(normal, d_normalize(dir));
+		//auto cos_theta = dot(normal, d_normalize(dir));
 		//attenuation *= cos_theta < 0 ? 0 : cos_theta / PI;
 		scattered = Ray(rec.p, dir);
 		return true;
