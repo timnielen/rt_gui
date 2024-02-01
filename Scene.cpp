@@ -160,6 +160,11 @@ void Scene::loadMaterialTextures(aiMaterial* aiMat, MultiMaterial* material)
             break;
         case textureTypeRoughness:
             type = aiTextureType_DIFFUSE_ROUGHNESS;
+            aiMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, col);
+            break;
+        case textureTypeEmission:
+            type = aiTextureType_EMISSIVE;
+            aiMat->Get(AI_MATKEY_COLOR_EMISSIVE, col);
             break;
         }
 

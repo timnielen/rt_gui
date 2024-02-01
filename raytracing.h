@@ -58,8 +58,13 @@ __device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, i
 			//return Vec3(1.0f);
 			Ray scatter;
 			Vec3 attenuation;
-			if (!rec.mat->scatter(cur_ray, rec, attenuation, scatter, local_rand_state))
-				return Vec3(0.0f);
+
+			Vec3 emission = rec.mat->getEmission(rec);
+			if (!emission.near_zero())
+				return emission * cur_attenuation;
+
+			if(!rec.mat->scatter(cur_ray, rec, attenuation, scatter, local_rand_state))
+				return Vec3(0);
 
 			cur_attenuation = cur_attenuation * attenuation;
 			cur_ray = scatter;
@@ -79,6 +84,7 @@ __device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, i
 				c = Vec3(0.15f);
 			//reverse Gamma correction
 			c = c * c;
+			//c = 0;
 			return cur_attenuation * c;
 		}
 	}

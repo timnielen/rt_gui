@@ -44,6 +44,9 @@ __device__ inline Vec3 refract(const Vec3& uv, const Vec3& n, float etai_over_et
 
 class Material {
 public:
+	__device__ virtual Vec3 getEmission(const HitRecord& rec) {
+		return Vec3(0);
+	}
     __device__ virtual bool scatter(
         const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const = 0;
 };
@@ -123,7 +126,7 @@ private:
 	}
 };
 
-enum TextureType { textureTypeDiffuse = 0, textureTypeSpecular, textureTypeNormal, textureTypeRoughness, textureTypeCount};
+enum TextureType { textureTypeDiffuse = 0, textureTypeSpecular, textureTypeNormal, textureTypeRoughness, textureTypeEmission, textureTypeCount};
 
 
 class MultiMaterial : public Material {
@@ -146,6 +149,10 @@ public:
 	Vec3 colors[textureTypeCount];
 	int textures[textureTypeCount];
 	cudaTexture cudaTextures[textureTypeCount];
+
+	__device__ virtual Vec3 getEmission(const HitRecord& rec) {
+		return colors[textureTypeEmission];
+	}
 
 	__device__ bool scatter(
 		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const override;

@@ -1,5 +1,5 @@
 #include "Material.h"
-
+#define PI 3.14159265359f
 __device__ bool MultiMaterial::scatter(
 	const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const {
 
@@ -46,13 +46,16 @@ __device__ bool MultiMaterial::scatter(
 	{
 		Vec3 reflected = reflect(d_normalize(r_in.direction), normal);
 		scattered = Ray(rec.p, reflected + roughness * random_unit_vector(local_rand_state));
-		return dot(scattered.direction, rec.normal) > 0;
+		//attenuation *= dot(scattered.direction, normal);
+		return dot(scattered.direction, normal) > 0;
 	}
 	else {
-		Vec3 dir = normal + random_on_hemisphere(normal, local_rand_state);
+		Vec3 dir = random_on_hemisphere(normal, local_rand_state);
 		// Catch degenerate scatter direction
 		if (dir.near_zero())
 			dir = normal;
+		auto cos_theta = dot(normal, d_normalize(dir));
+		//attenuation *= cos_theta < 0 ? 0 : cos_theta / PI;
 		scattered = Ray(rec.p, dir);
 		return true;
 	}	
