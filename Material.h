@@ -58,7 +58,7 @@ public:
 
 	__device__ bool scatter(
 		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const override {
-		Vec3 dir = rec.normal + random_on_hemisphere(rec.normal, local_rand_state);
+		Vec3 dir = rec.normal + random_unit_vector(local_rand_state);
 		
 		// Catch degenerate scatter direction
 		if (dir.near_zero())
