@@ -49,12 +49,12 @@ __global__ void free_scene(Hitable** scene, Hitable** objects, unsigned int size
 	delete* scene;
 }
 
-__device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, int max_steps, cudaTextureObject_t hdri) { 
+__device__ Vec3 ray_color(Ray& r, Hitable* scene, Hitable** lights, int lightCount, curandState* local_rand_state, int max_steps, cudaTextureObject_t hdri) {
 	Ray cur_ray = r;
 	Vec3 cur_attenuation = 1.0f;
 	for (int i = 0; i < max_steps; i++) {
 		HitRecord rec;
-		if (obj->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
+		if (scene->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
 			//return Vec3(1.0f);
 			Ray scatter;
 			Vec3 attenuation;
@@ -63,10 +63,37 @@ __device__ Vec3 ray_color(Ray& r, Hitable* obj, curandState* local_rand_state, i
 			if (!emission.near_zero())
 				return emission * cur_attenuation;
 
-			if(!rec.mat->scatter(cur_ray, rec, attenuation, scatter, local_rand_state))
+			bool skip_pdf = true;
+			if(!rec.mat->scatter(cur_ray, rec, attenuation, scatter, local_rand_state, skip_pdf))
 				return Vec3(0);
 
-			cur_attenuation = cur_attenuation * attenuation;
+			if(skip_pdf)
+			{
+				cur_attenuation = cur_attenuation * attenuation;
+				cur_ray = scatter;
+				continue;
+			}
+
+			float lightPDF;
+			const float pMat = lightCount > 0 ? 0.5f : 1.0f;
+			const float pLights = (1 - pMat) / (float)lightCount;
+
+			float r = curand_uniform(local_rand_state);
+			if (r > pMat) {
+				Hitable* light = lights[(int)ceilf(lightCount * (r - pMat) / (1 - pMat)) - 1];
+				Vec3 on_light = light->random(local_rand_state);
+				Vec3 to_light = on_light - rec.p;
+				scatter = Ray(rec.p, to_light);
+				if (dot(to_light, rec.normal) < 0)
+					return 0;
+			}
+			float scattering_pdf = rec.mat->pdf(cur_ray, rec, scatter);
+			float pdf = pMat * scattering_pdf;
+			for (int l = 0; l < lightCount; l++) {
+				pdf += pLights * lights[l]->pdf(scatter);
+			}
+
+			cur_attenuation = cur_attenuation * attenuation * scattering_pdf / pdf;
 			cur_ray = scatter;
 		}
 		else {
@@ -100,7 +127,7 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
 	curand_init(6969 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RayTracer* cam, Hitable** scene, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
+__global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, RayTracer* cam, Hitable** scene, Hitable** lights, int lightCount, cudaTextureObject_t hdri, curandState* rand_state, int samples, int max_steps, int accumulation) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	if ((i >= max_x) || (j >= max_y)) return;
@@ -113,7 +140,7 @@ __global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, 
 		float u = float(i + curand_uniform(local_rand_state)) / float(max_x);
 		float v = float(j + curand_uniform(local_rand_state)) / float(max_y);
 		Ray r = cam->getRay(u,v);
-		col += ray_color(r, *scene, local_rand_state, max_steps, hdri);
+		col += ray_color(r, *scene, lights, lightCount, local_rand_state, max_steps, hdri);
 		
 	}
 	col /= (float)samples;

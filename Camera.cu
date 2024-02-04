@@ -148,21 +148,25 @@ void RayTracer::resize(const int& width, const int& height, const float& fov, co
 }
 
 
-
+bool first = true;
 uint RayTracer::render() {
 	dim3 blocks(imageWidth / blockW + 1, imageHeight / blockH + 1);
 	dim3 threads(blockW, blockH);
 
 	accumulation++;
-	environment.map();
-	renderImage.map();
+	if(first)
+	{
+		first = false;
+		environment.map();
+		renderImage.map();
+	}
 
-	render_image << <blocks, threads >> > (renderImage.surfaceObject, imageWidth, imageHeight, deviceCopy, scene, environment.texObject, randomStates, samples, max_steps, accumulation);
+	render_image << <blocks, threads >> > (renderImage.surfaceObject, imageWidth, imageHeight, deviceCopy, scene, lights, lightCount, environment.texObject, randomStates, samples, max_steps, accumulation);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	environment.unmap();
-	renderImage.unmap();
+	/*environment.unmap();
+	renderImage.unmap();*/
 	return image;
 }
 

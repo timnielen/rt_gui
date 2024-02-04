@@ -289,21 +289,30 @@ void Scene::loadToDevice() {
     
     AABB aabb(Vec3(0),Vec3(0));
     primitiveCount = 0;
+    lightCount = 0;
     for (int i = 0; i < meshCount; i++) {
         aabb = AABB(aabb, meshes[i].aabb);
         meshes[i].loadToDevice();
         primitiveCount += meshes[i].triCount;
+        if (meshes[i].material->isLight())
+            lightCount += meshes[i].triCount;
     }
     auto t2 = high_resolution_clock::now();
     std::cout << "loading meshes into cuda took " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << std::endl;
 
     cudaMalloc((void**)&primitives, primitiveCount * sizeof(Hitable*));
+    cudaMalloc((void**)&lights, lightCount * sizeof(Hitable*));
 
     int offset = 0;
+    int offsetLights = 0;
     for (int i = 0; i < meshCount; i++) {
         cudaMemcpy(primitives + offset, meshes[i].triangles, meshes[i].triCount * sizeof(Hitable*), cudaMemcpyDeviceToDevice);
-        cudaFree(meshes[i].triangles);
         offset += meshes[i].triCount;
+        if (meshes[i].material->isLight()) {
+            cudaMemcpy(lights + offsetLights, meshes[i].triangles, meshes[i].triCount * sizeof(Hitable*), cudaMemcpyDeviceToDevice);
+            offsetLights += meshes[i].triCount;
+        }
+        cudaFree(meshes[i].triangles);
     }
     auto t3 = high_resolution_clock::now();
     std::cout << "copying primitives took: " << duration_cast<milliseconds>(t3 - t2).count() << "ms" << std::endl;
@@ -313,7 +322,6 @@ void Scene::loadToDevice() {
     cudaMallocManaged((void**)&bvh, sizeof(BVH));
     cudaMemcpy(bvh, &BVH(primitives, primitiveCount, aabb), sizeof(BVH), cudaMemcpyDefault);
     bvh->init();
-    
   
     copyBvhToHitable << <1, 1 >> > (hitable, bvh);
     cudaFree(bvh);

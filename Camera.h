@@ -110,6 +110,8 @@ class RayTracer : public Renderer {
 public:
 	RayTracer(const Scene& scene) {
 		this->scene = scene.hitable;
+		this->lights = scene.lights;
+		this->lightCount = scene.lightCount;
 		environment.init(load_texture("./assets/hdri/sunflowers_puresky_4k.hdr")); 
 	}
 	__device__ Ray getRay(float u, float v) {
@@ -130,6 +132,8 @@ public:
 	}
 private:
 	Hitable** scene;
+	Hitable** lights;
+	int lightCount;
 	cudaTexture environment;
 	cudaSurface renderImage;
 	uint image;

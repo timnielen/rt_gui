@@ -33,7 +33,9 @@ public:
 
     Hitable** hitable;
     Hitable** primitives;
+    Hitable** lights;
     int primitiveCount;
+    int lightCount;
     AABB* aabbs = nullptr;
     unsigned int aabbVAO;
     void loadAABBs(int depth);

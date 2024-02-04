@@ -2,6 +2,7 @@
 #include "Vec3.h"
 #include "Ray.h"
 #include "AABB.h"
+#include <curand_kernel.h>
 
 class Material;
 
@@ -34,6 +35,12 @@ class Hitable {
 public:
 	AABB aabb;
 	__device__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const = 0;
+	__device__ virtual Vec3 random(curandState* local_rand_state) {
+		return Vec3(0);
+	}
+	__device__ virtual float pdf(const Ray& r) {
+		return 0;
+	}
 };
 
 

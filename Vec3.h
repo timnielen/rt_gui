@@ -79,7 +79,7 @@ public:
         return *this;
     }
     __host__ __device__ float length() const {
-        return sqrt(length_squared());
+        return sqrtf(length_squared());
     }
 
     __host__ __device__ float length_squared() const {

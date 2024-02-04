@@ -47,8 +47,11 @@ public:
 	__device__ virtual Vec3 getEmission(const HitRecord& rec) {
 		return Vec3(0);
 	}
+	__device__ virtual float pdf(const Ray& r_in, const HitRecord& rec, const Ray& scattered) {
+		return 0;
+	}
     __device__ virtual bool scatter(
-        const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const = 0;
+        const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state, bool& skip_pdf) const = 0;
 };
 
 class Lambertian : public Material {
@@ -57,7 +60,7 @@ public:
     __device__ __host__ Lambertian(const Vec3& albedo) : albedo(albedo) {}
 
 	__device__ bool scatter(
-		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const override {
+		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state, bool& skip_pdf) const override {
 		Vec3 dir = rec.normal + random_unit_vector(local_rand_state);
 		
 		// Catch degenerate scatter direction
@@ -74,7 +77,7 @@ class Metal : public Material {
 public:
 	__device__ Metal(const Vec3& a, float roughness) : albedo(a), roughness(roughness) {}
 
-	__device__ bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state)
+	__device__ bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state, bool& skip_pdf)
 		const override {
 		Vec3 reflected = reflect(d_normalize(r_in.direction), rec.normal);
 		scattered = Ray(rec.p, reflected + roughness * random_unit_vector(local_rand_state));
@@ -91,7 +94,7 @@ class Dielectric : public Material {
 public:
 	__device__ Dielectric(float index_of_refraction) : ir(index_of_refraction) {}
 
-	__device__ bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state)
+	__device__ bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state, bool& skip_pdf)
 		const override {
 		attenuation = Vec3(1.0f);
 		float refraction_ratio = rec.front_face ? (1.0f / ir) : ir;
@@ -139,6 +142,9 @@ public:
 	MultiMaterial(int index) : index(index) {
 		memset(textures, -1, sizeof(textures));
 	}
+	bool isLight() {
+		return strncmp(name, "Light", 5) == 0;
+	}
 	char name[255] = "Default Material";
 	int index;
 	aiBlendMode blendMode = aiBlendMode_Default;
@@ -151,11 +157,15 @@ public:
 	cudaTexture cudaTextures[textureTypeCount];
 
 	__device__ virtual Vec3 getEmission(const HitRecord& rec) {
+		if (!rec.front_face)
+			return 0;
 		return colors[textureTypeEmission];
 	}
 
+	__device__ float pdf(const Ray& r_in, const HitRecord& rec, const Ray& scattered) override;
+
 	__device__ bool scatter(
-		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state) const override;
+		const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState* local_rand_state, bool& skip_pdf) const override;
 };
 
 const MultiMaterial DEFAULT_MATERIAL;
