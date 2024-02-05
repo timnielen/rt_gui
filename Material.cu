@@ -50,8 +50,8 @@ __device__ bool MultiMaterial::scatter(
 		roughness = col.x;
 	}
 
-	//if(curand_uniform(local_rand_state) < specular) 
-	if(0)
+	if(curand_uniform(local_rand_state) < specular) 
+	//if(0)
 	{
 		Vec3 reflected = reflect(d_normalize(r_in.direction), normal);
 		scattered = Ray(rec.p, reflected + roughness * random_unit_vector(local_rand_state));
@@ -65,18 +65,19 @@ __device__ bool MultiMaterial::scatter(
 		//if (dir.near_zero())
 		//	dir = normal;
 		
-		Vec3 a = (fabsf(normal.x) > 0.9) ? Vec3(0, 1, 0) : Vec3(1, 0, 0);
+		/*Vec3 a = (fabsf(normal.x) > 0.9) ? Vec3(0, 1, 0) : Vec3(1, 0, 0);
 		Vec3 tangent = d_normalize(cross(normal, a));
 		Vec3 cotangent = cross(normal, tangent);
 
 		Vec3 dir = random_cosine_direction(local_rand_state);
-		dir = dir.x * tangent + dir.y * cotangent + dir.z * normal;
+		dir = dir.x * tangent + dir.y * cotangent + dir.z * normal;*/
 
+		
+
+		Vec3 dir = normal + random_unit_vector(local_rand_state);
 		if (dir.near_zero())
 			dir = normal;
-		
-		//auto cos_theta = dot(normal, d_normalize(dir));
-		//attenuation *= cos_theta < 0 ? 0 : cos_theta / PI;
+
 		skip_pdf = false;
 		scattered = Ray(rec.p, dir);
 		return true;
@@ -92,5 +93,5 @@ __device__ float MultiMaterial::pdf(const Ray& r_in, const HitRecord& rec, const
 		normal = d_normalize(rec.tangent * normal.x + rec.bitangent * normal.y + rec.normal * normal.z);
 	}
 
-	return fmaxf(0, dot(normal, d_normalize(scattered.direction)) / PI);
+	return fmaxf(0.0f, dot(normal, d_normalize(scattered.direction)) / PI);
 }

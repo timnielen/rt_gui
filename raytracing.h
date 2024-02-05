@@ -84,7 +84,7 @@ __device__ Vec3 ray_color(Ray& r, Hitable* scene, Hitable** lights, int lightCou
 				Vec3 on_light = light->random(local_rand_state);
 				Vec3 to_light = on_light - rec.p;
 				scatter = Ray(rec.p, to_light);
-				if (dot(to_light, rec.normal) < 0)
+				if (dot(to_light, rec.normal) < 0.000001f)
 					return 0;
 			}
 			float scattering_pdf = rec.mat->pdf(cur_ray, rec, scatter);
@@ -97,10 +97,6 @@ __device__ Vec3 ray_color(Ray& r, Hitable* scene, Hitable** lights, int lightCou
 			cur_ray = scatter;
 		}
 		else {
-			/*Vec3 unit_direction = d_normalize(cur_ray.direction);
-			float t = 0.5f * (unit_direction.y + 1.0f);
-			Vec3 c = (1.0f - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);*/
-
 			float2 hdriUV = sampleSphericalMap(d_normalize(cur_ray.direction));
 			float4 col_hdri = tex2D<float4>(hdri, hdriUV.x, hdriUV.y);
 			Vec3 c = Vec3(col_hdri.x, col_hdri.y, col_hdri.z);

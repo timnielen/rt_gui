@@ -88,7 +88,9 @@ public:
             return 0;
 
         float distance_squared = rec.t * rec.t * r.direction.length_squared();
-        float cosine = fabs(dot(r.direction, rec.normal) * rsqrtf(r.direction.length_squared()));
+        float cosine = fabs(dot(d_normalize(r.direction), rec.normal));
+        if (cosine < 0.0000001f)
+            return 0;
         return distance_squared / (cosine * area);
     }
 };
