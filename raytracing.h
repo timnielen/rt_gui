@@ -75,7 +75,8 @@ __device__ Vec3 ray_color(Ray& r, Hitable* scene, Hitable** lights, int lightCou
 			}
 
 			float lightPDF;
-			const float pMat = lightCount > 0 ? 0.5f : 1.0f;
+			const float pMat = lightCount > 0 ? 0.25f : 1.0f;
+
 			const float pLights = (1 - pMat) / (float)lightCount;
 
 			float r = curand_uniform(local_rand_state);
@@ -84,7 +85,7 @@ __device__ Vec3 ray_color(Ray& r, Hitable* scene, Hitable** lights, int lightCou
 				Vec3 on_light = light->random(local_rand_state);
 				Vec3 to_light = on_light - rec.p;
 				scatter = Ray(rec.p, to_light);
-				if (dot(to_light, rec.normal) < 0.000001f)
+				if (dot(to_light, rec.normal) < 0.0f)
 					return 0;
 			}
 			float scattering_pdf = rec.mat->pdf(cur_ray, rec, scatter);
@@ -136,12 +137,20 @@ __global__ void render_image(cudaSurfaceObject_t surface, int max_x, int max_y, 
 		float u = float(i + curand_uniform(local_rand_state)) / float(max_x);
 		float v = float(j + curand_uniform(local_rand_state)) / float(max_y);
 		Ray r = cam->getRay(u,v);
-		col += ray_color(r, *scene, lights, lightCount, local_rand_state, max_steps, hdri);
+		Vec3 rgb = ray_color(r, *scene, lights, lightCount, local_rand_state, max_steps, hdri);
+		if (rgb.x != rgb.x) rgb.x = 0.0f;
+		if (rgb.y != rgb.y) rgb.y = 0.0f;
+		if (rgb.z != rgb.z) rgb.z = 0.0f;
+		col += rgb;
 		
 	}
 	col /= (float)samples;
-	//Vec3 col = Vec3(curand_uniform(local_rand_state), curand_uniform(local_rand_state), curand_uniform(local_rand_state));
-	//auto col = Vec3(0.4f, 0.3f, 1.0f);
+
+	//Tone mapping
+	float exposure = 5.0f;
+	col = -col * exposure;
+	col = Vec3(1.0) - Vec3(expf(col.x), expf(col.y), expf(col.z));
+
 	float4 prev_col;
 	surf2Dread(&prev_col, surface, i * sizeof(float4), j);
 	Vec3 prev = Vec3(prev_col.x, prev_col.y, prev_col.z);

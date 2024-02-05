@@ -68,7 +68,9 @@ public:
         z *= t;
         return *this;
     }
-
+    __host__ __device__ Vec3 operator/(Vec3 v) {
+        return Vec3(x /= v.x, y /= v.y, z /= v.z);
+    }
     __host__ __device__ Vec3& operator/=(float t) {
         return *this *= 1 / t;
     }
